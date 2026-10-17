@@ -55,49 +55,52 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const CJK=/[\u3400-\u9fff]/;
 const MAX_MISS=5; // practice mode: up to this many wrong strokes per word still counts as correct
-const SAMPLE="# Lesson 1 - Greetings\n你好 | nǐ hǎo | hello\n谢谢 | xièxie | thank you\n再见 | zàijiàn | goodbye\n对不起 | duìbuqǐ | sorry\n# Lesson 2 - Campus\n图书馆 | túshūguǎn | library\n学生 | xuésheng | student\n老师 | lǎoshī | teacher\n教室 | jiàoshì | classroom";
-let deck=[],sel=new Set(),R;
-try{const d=JSON.parse(localStorage.getItem("hz-deck")||"null");if(d){deck=d.deck;sel=new Set(d.sel)}}catch(e){}
-const save=()=>{try{localStorage.setItem("hz-deck",JSON.stringify({deck,sel:[...sel]}))}catch(e){}};
+const SAMPLE="# Lesson 1 - Greetings\n你好 | nǐ hǎo | hello\n谢谢 | xièxie | thank you\n再见 | zàijiàn | goodbye\n对不起 | duìbuqǐ | sorry\n# Lesson 2 - Campus\n图书馆 | túshūguǎn | library\n学生 | xuésheng | student\n老师 | lǎoshī | teacher\n教室 | jiàoshì | classroom\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese\n[S] 老师 在 教室 里 | lǎoshī zài jiàoshì lǐ | The teacher is in the classroom";
+let deck=[],sents=[],sel=new Set(),R;
+try{const d=JSON.parse(localStorage.getItem("hz-deck")||"null");if(d){deck=d.deck;sents=d.sents||[];sel=new Set(d.sel)}}catch(e){}
+const save=()=>{try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,sel:[...sel]}))}catch(e){}};
 const say=t=>{try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="zh-CN";u.rate=.8;speechSynthesis.speak(u)}catch(e){}};
 
 function parse(t){
-  const out=[],bad=[];let lesson="Lesson 1";
+  const out=[],bad=[],sent=[];let lesson="Lesson 1";
   t.split(/\r?\n/).forEach((raw,i)=>{
-    const l=raw.trim();if(!l||/^\[S\]/i.test(l))return;
+    const l=raw.trim();if(!l)return;
+    if(/^\[S\]/i.test(l)){const c=l.replace(/^\[S\]\s*/i,"").split(l.includes("|")?"|":"\t").map(x=>x.trim());const t=(c[0]||"").split(/\s+/).filter(Boolean);
+      if(c.length<3||t.length<2||!CJK.test(c[0])){bad.push("Line "+(i+1)+": "+l);return}
+      sent.push({h:t.join(""),t,p:c[1],m:c.slice(2).join(" | "),l:lesson});return}
     if(l[0]=="#"){lesson=l.replace(/^#+\s*/,"")||lesson;return}
     const c=l.split(l.includes("|")?"|":"\t").map(x=>x.trim());
     if(c.length<3||!CJK.test(c[0])||!c[1]||!c[2]){bad.push("Line "+(i+1)+": "+l);return}
     out.push({h:c[0],p:c[1],m:c.slice(2).join(" | "),l:lesson});
   });
-  return{out,bad};
+  return{out,bad,sent};
 }
 
 function home(){
-  const ls=[...new Set(deck.map(w=>w.l))];
+  const ls=[...new Set([...deck,...sents].map(w=>w.l))];
   app.innerHTML=`<header><h1>听写<small>Hanzi Dictation</small></h1><p>Load your own vocabulary list and practise it the way your class tests it: by writing.</p></header>
   <section class="card"><h2>Your word list</h2>
   <textarea id="txt" rows="6" placeholder="# Lesson 1&#10;你好 | nǐ hǎo | hello"></textarea>
   <div class="row"><input type="file" id="file" accept=".txt,text/plain"><button id="load">Load words</button><button class="ghost" id="sample">Try a sample</button></div>
   <div id="msg" aria-live="polite"></div>
-  <details><summary>File format</summary><pre># Lesson title (optional)\nhanzi | pinyin | meaning\n你好 | nǐ hǎo | hello</pre><p class="hint">One word per line. Separate with | or a tab. Write the meaning in any language you like.</p></details></section>
-  ${deck.length?`<section class="card"><h2>Lessons (${deck.length} words)</h2>${ls.map((l,i)=>`<label class="ls"><input type="checkbox" data-l="${i}" ${sel.has(l)?"checked":""}> ${esc(l)} <span class="hint">${deck.filter(w=>w.l==l).length} words</span></label>`).join("")}
+  <details><summary>File format</summary><pre># Lesson title (optional)\nhanzi | pinyin | meaning\n你好 | nǐ hǎo | hello\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese</pre><p class="hint">One word per line. Separate with | or a tab. Write the meaning in any language you like. Lines starting with [S] are sentences for the arrange game: put spaces between the words.</p></details></section>
+  ${deck.length||sents.length?`<section class="card"><h2>Lessons (${deck.length} words, ${sents.length} sentences)</h2>${ls.map((l,i)=>`<label class="ls"><input type="checkbox" data-l="${i}" ${sel.has(l)?"checked":""}> ${esc(l)} <span class="hint">${deck.filter(w=>w.l==l).length} words, ${sents.filter(w=>w.l==l).length} sentences</span></label>`).join("")}
   <div class="row"><label>Words per round <input type="number" id="cnt" min="1" max="200" value="10" style="width:70px;padding:6px"></label><button class="ghost" id="clr">Remove list</button></div></section>
   <section class="card modes"><h2>Practise</h2><div class="row">
   <button data-m="dict"><b>Dictation</b><span>Hear it, write on paper, check yourself</span></button>
   <button data-m="write"><b>Write on screen</b><span>Draw each stroke with finger or stylus</span></button>
   <button data-m="quiz"><b>Meaning quiz</b><span>Pick the meaning, then confirm</span></button></div></section>`:""}${window.mpCard?mpCard():""}`;
-  const load=t=>{const{out,bad}=parse(t);const m=$("#msg");
-    if(!out.length){m.innerHTML=`<span class="e">No valid words found. Check the format below.</span>`;return}
-    deck=out;sel=new Set(out.map(w=>w.l));save();home();
+  const load=t=>{const{out,bad,sent}=parse(t);const m=$("#msg");
+    if(!out.length&&!sent.length){m.innerHTML=`<span class="e">No valid words found. Check the format below.</span>`;return}
+    deck=out;sents=sent;sel=new Set([...out,...sent].map(w=>w.l));save();home();
     if(bad.length)$("#msg").innerHTML=`<span class="e">${bad.length} line(s) skipped:<br>${bad.slice(0,5).map(esc).join("<br>")}</span>`;};
   $("#load").onclick=()=>load($("#txt").value);
   $("#sample").onclick=()=>load(SAMPLE);
   $("#file").onchange=e=>{const f=e.target.files[0];if(f)f.text().then(load)};
   if(window.mpBind)mpBind();
-  if(deck.length){
+  if(deck.length||sents.length){
     app.querySelectorAll("[data-l]").forEach(c=>c.onchange=()=>{const l=ls[+c.dataset.l];c.checked?sel.add(l):sel.delete(l);save()});
-    $("#clr").onclick=()=>{deck=[];sel=new Set();save();home()};
+    $("#clr").onclick=()=>{deck=[];sents=[];sel=new Set();save();home()};
     app.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{
       const q=shuf(deck.filter(w=>sel.has(w.l))).slice(0,+$("#cnt").value||10);
       if(!q.length){alert("Select at least one lesson.");return}
