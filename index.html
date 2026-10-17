@@ -52,6 +52,7 @@ const $=s=>document.querySelector(s),app=$("#app");
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const CJK=/[\u3400-\u9fff]/;
+const MAX_MISS=5; // practice mode: up to this many wrong strokes per word still counts as correct
 const SAMPLE="# Lesson 1 - Greetings\n你好 | nǐ hǎo | hello\n谢谢 | xièxie | thank you\n再见 | zàijiàn | goodbye\n对不起 | duìbuqǐ | sorry\n# Lesson 2 - Campus\n图书馆 | túshūguǎn | library\n学生 | xuésheng | student\n老师 | lǎoshī | teacher\n教室 | jiàoshì | classroom";
 let deck=[],sel=new Set(),R;
 try{const d=JSON.parse(localStorage.getItem("hz-deck")||"null");if(d){deck=d.deck;sel=new Set(d.sel)}}catch(e){}
@@ -103,7 +104,7 @@ function home(){
 
 function run(mode,q){R={mode,q,i:0,res:[],t:0};step()}
 function step(){if(R.i>=R.q.length)return done();R.t=Date.now();({dict,write,quiz})[R.mode](R.q[R.i])}
-function rec(ok){R.res.push({w:R.q[R.i],ok,ms:Date.now()-R.t});R.i++;step()}
+function rec(ok,miss){R.res.push({w:R.q[R.i],ok,ms:Date.now()-R.t,miss});R.i++;step()}
 function frame(inner){
   app.innerHTML=`<div class="bar"><button class="ghost" id="quit">Quit</button><span>${R.i+1} / ${R.q.length}</span><div class="prog"><i style="width:${R.i/R.q.length*100}%"></i></div></div><section class="card q">${inner}</section>`;
   $("#quit").onclick=home;
@@ -117,7 +118,7 @@ function dict(w){
 
 function write(w){
   const chars=[...w.h].filter(c=>CJK.test(c)),sz=chars.length>2?160:220;
-  frame(`<p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><div class="boxes" id="bx"></div><p id="st" class="hint">Write each character stroke by stroke. Up to one wrong stroke per character still counts.</p><div class="row" id="ctl"><button class="ghost" id="ls">Listen</button><button class="ghost" id="sa">Show answer</button></div>`);
+  frame(`<p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><div class="boxes" id="bx"></div><p id="st" class="hint">Write each character stroke by stroke. You can keep going after a wrong stroke. Up to ${MAX_MISS} wrong strokes in the word still count as correct. Giving up counts as wrong.</p><div class="row" id="ctl"><button class="ghost" id="ls">Listen</button><button class="ghost" id="sa">Show answer</button></div>`);
   $("#ls").onclick=()=>say(w.h);
   let miss=0,fbk=false,W=[];
   const fallback=()=>{if(fbk)return;fbk=true;$("#bx").innerHTML="";$("#st").textContent="Stroke data is unavailable for this word, so check yourself on paper.";
@@ -130,10 +131,11 @@ function write(w){
   const go=k=>W[k].quiz({onMistake:()=>{miss++},onComplete:()=>{
     if(fbk)return;
     if(k+1<W.length)return go(k+1);
-    $("#st").textContent=miss?`Finished with ${miss} wrong stroke${miss>1?"s":""}.`:"Perfect, no wrong strokes.";
-    $("#ctl").innerHTML=`<button id="nx">Next</button>`;const ok=miss<=chars.length;$("#nx").onclick=()=>rec(ok)}});
+    const ok=miss<=MAX_MISS;
+    $("#st").textContent=(miss?`Finished with ${miss} wrong stroke${miss>1?"s":""}.`:"Perfect, no wrong strokes.")+(ok?" Counted as correct.":` More than ${MAX_MISS} wrong strokes, so counted as wrong.`);
+    $("#ctl").innerHTML=`<button id="nx">Next</button>`;$("#nx").onclick=()=>rec(ok,miss)}});
   go(0);
-  $("#sa").onclick=()=>{if(fbk)return;W.forEach(x=>{x.cancelQuiz();x.showCharacter()});$("#st").textContent="Study the strokes, then continue.";$("#ctl").innerHTML=`<button id="nx">Next</button>`;$("#nx").onclick=()=>rec(0)};
+  $("#sa").onclick=()=>{if(fbk)return;W.forEach(x=>{x.cancelQuiz();x.showCharacter()});$("#st").textContent=`You gave up after ${miss} wrong stroke${miss==1?"":"s"}, so this counts as wrong. Study the strokes, then continue.`;$("#ctl").innerHTML=`<button id="nx">Next</button>`;$("#nx").onclick=()=>rec(0,miss)};
 }
 
 function quiz(w){
@@ -149,6 +151,7 @@ function done(){
   const ok=R.res.filter(r=>r.ok).length,miss=R.res.filter(r=>!r.ok).map(r=>r.w);
   const avg=(R.res.reduce((a,r)=>a+r.ms,0)/R.res.length/1000).toFixed(1);
   app.innerHTML=`<section class="card"><h2>Result</h2><p class="score">${ok} / ${R.res.length}</p><p class="hint">Average ${avg} seconds per word</p>
+  ${R.mode=="write"?`<p class="hint">Wrong strokes per word: ${R.res.map(r=>esc(r.w.h)+" "+(r.miss==null?"-":r.miss)).join(", ")}</p>`:""}
   ${miss.length?`<h3>Words to review</h3><ul class="miss">${miss.map(w=>`<li><span class="hz-s">${esc(w.h)}</span><span>${esc(w.p)}</span><span class="hint">${esc(w.m)}</span></li>`).join("")}</ul>`:"<p>No missed words.</p>"}
   <div class="row">${miss.length?`<button id="rt">Practise missed words</button>`:""}<button class="ghost" id="hm">Back to start</button></div></section>`;
   if(miss.length)$("#rt").onclick=()=>run(R.mode,shuf(miss));
