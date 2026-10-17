@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>听写 Hanzi Dictation</title>
+<style>
+:root{--bg:#f1f4f0;--card:#fff;--ink:#16213a;--mut:#5d6677;--line:#c9d1ca;--red:#c0222f;--ok:#237a4b;--bad:#b3261e;--hz:"Noto Serif SC","Songti SC","STSong","SimSun",serif;--ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#11151c;--card:#1a202a;--ink:#e8ecf2;--mut:#98a2b3;--line:#344050;--red:#ef6b73;--ok:#5cc58b;--bad:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--ui);padding:max(16px,env(safe-area-inset-top)) 16px 40px}
+#app{max-width:640px;margin:0 auto}
+h1{font:700 2.2rem/1.1 var(--hz);margin:8px 0 4px}h1 small{font:500 1rem var(--ui);color:var(--mut);margin-left:8px}
+h2{font-size:1.05rem;margin:0 0 10px}h3{margin:16px 0 6px;font-size:1rem}
+header p{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px}
+textarea{width:100%;font:14px/1.5 var(--hz);padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);resize:vertical}
+button{font:600 15px var(--ui);padding:10px 16px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+button.ok{background:var(--ok);border-color:var(--ok);color:#fff}button.bad{background:var(--bad);border-color:var(--bad);color:#fff}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+.modes button{flex:1;min-width:140px;text-align:left;padding:14px}.modes b{display:block;font-size:1.05rem}.modes span{font-weight:400;font-size:13px;opacity:.8}
+label.ls{display:flex;gap:10px;padding:6px 0;align-items:center}
+#msg{margin-top:8px;font-size:14px}#msg .e{color:var(--bad)}
+pre{background:var(--bg);padding:10px;border-radius:8px;overflow:auto;font-size:13px}
+.q{text-align:center;padding:26px 18px}
+.py{font-size:1.5rem;margin:6px 0}.mn{font-size:1.1rem;color:var(--mut);margin:0 0 14px}
+.hz{font:700 4rem/1.2 var(--hz);margin:10px 0}.hz-s{font:700 1.3rem var(--hz)}
+.hint{color:var(--mut);font-size:14px}
+.q .row{justify-content:center}
+.boxes{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:12px 0}
+.tzg{border:2px solid var(--red);line-height:0;background:
+ repeating-linear-gradient(to bottom,var(--line) 0 6px,transparent 6px 12px) center/1px 100% no-repeat,
+ repeating-linear-gradient(to right,var(--line) 0 6px,transparent 6px 12px) center/100% 1px no-repeat}
+.bar{display:flex;gap:12px;align-items:center;margin-bottom:12px}.prog{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}.prog i{display:block;height:100%;background:var(--red)}
+.opts{display:grid;gap:8px;margin:14px 0}
+.opt{background:var(--card);color:var(--ink);border:2px solid var(--line);text-align:left;padding:12px}
+.opt.on{border-color:var(--ink)}.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 18%,var(--card))}.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 18%,var(--card))}
+.score{font:700 3rem var(--hz);margin:0}.miss{padding-left:0;list-style:none}.miss li{padding:6px 0;border-bottom:1px solid var(--line)}.miss span+span{margin-left:8px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js"></script>
+<script>
+// Used by the multiplayer rooms (next step). The publishable key is safe to keep in client code.
+const CONFIG={supabaseUrl:"https://bsxeqczvogjptbqdvbse.supabase.co",supabaseKey:"sb_publishable_B-rFzGRvOOMxHwfjQ5q_ew_nOqstjJN"};
+
+const $=s=>document.querySelector(s),app=$("#app");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const CJK=/[\u3400-\u9fff]/;
+const SAMPLE="# Lesson 1 - Greetings\n你好 | nǐ hǎo | hello\n谢谢 | xièxie | thank you\n再见 | zàijiàn | goodbye\n对不起 | duìbuqǐ | sorry\n# Lesson 2 - Campus\n图书馆 | túshūguǎn | library\n学生 | xuésheng | student\n老师 | lǎoshī | teacher\n教室 | jiàoshì | classroom";
+let deck=[],sel=new Set(),R;
+try{const d=JSON.parse(localStorage.getItem("hz-deck")||"null");if(d){deck=d.deck;sel=new Set(d.sel)}}catch(e){}
+const save=()=>{try{localStorage.setItem("hz-deck",JSON.stringify({deck,sel:[...sel]}))}catch(e){}};
+const say=t=>{try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="zh-CN";u.rate=.8;speechSynthesis.speak(u)}catch(e){}};
+
+function parse(t){
+  const out=[],bad=[];let lesson="Lesson 1";
+  t.split(/\r?\n/).forEach((raw,i)=>{
+    const l=raw.trim();if(!l||/^\[S\]/i.test(l))return;
+    if(l[0]=="#"){lesson=l.replace(/^#+\s*/,"")||lesson;return}
+    const c=l.split(l.includes("|")?"|":"\t").map(x=>x.trim());
+    if(c.length<3||!CJK.test(c[0])||!c[1]||!c[2]){bad.push("Line "+(i+1)+": "+l);return}
+    out.push({h:c[0],p:c[1],m:c.slice(2).join(" | "),l:lesson});
+  });
+  return{out,bad};
+}
+
+function home(){
+  const ls=[...new Set(deck.map(w=>w.l))];
+  app.innerHTML=`<header><h1>听写<small>Hanzi Dictation</small></h1><p>Load your own vocabulary list and practise it the way your class tests it: by writing.</p></header>
+  <section class="card"><h2>Your word list</h2>
+  <textarea id="txt" rows="6" placeholder="# Lesson 1&#10;你好 | nǐ hǎo | hello"></textarea>
+  <div class="row"><input type="file" id="file" accept=".txt,text/plain"><button id="load">Load words</button><button class="ghost" id="sample">Try a sample</button></div>
+  <div id="msg" aria-live="polite"></div>
+  <details><summary>File format</summary><pre># Lesson title (optional)\nhanzi | pinyin | meaning\n你好 | nǐ hǎo | hello</pre><p class="hint">One word per line. Separate with | or a tab. Write the meaning in any language you like.</p></details></section>
+  ${deck.length?`<section class="card"><h2>Lessons (${deck.length} words)</h2>${ls.map((l,i)=>`<label class="ls"><input type="checkbox" data-l="${i}" ${sel.has(l)?"checked":""}> ${esc(l)} <span class="hint">${deck.filter(w=>w.l==l).length} words</span></label>`).join("")}
+  <div class="row"><label>Words per round <input type="number" id="cnt" min="1" max="200" value="10" style="width:70px;padding:6px"></label><button class="ghost" id="clr">Remove list</button></div></section>
+  <section class="card modes"><h2>Practise</h2><div class="row">
+  <button data-m="dict"><b>Dictation</b><span>Hear it, write on paper, check yourself</span></button>
+  <button data-m="write"><b>Write on screen</b><span>Draw each stroke with finger or stylus</span></button>
+  <button data-m="quiz"><b>Meaning quiz</b><span>Pick the meaning, then confirm</span></button></div></section>`:""}`;
+  const load=t=>{const{out,bad}=parse(t);const m=$("#msg");
+    if(!out.length){m.innerHTML=`<span class="e">No valid words found. Check the format below.</span>`;return}
+    deck=out;sel=new Set(out.map(w=>w.l));save();home();
+    if(bad.length)$("#msg").innerHTML=`<span class="e">${bad.length} line(s) skipped:<br>${bad.slice(0,5).map(esc).join("<br>")}</span>`;};
+  $("#load").onclick=()=>load($("#txt").value);
+  $("#sample").onclick=()=>load(SAMPLE);
+  $("#file").onchange=e=>{const f=e.target.files[0];if(f)f.text().then(load)};
+  if(deck.length){
+    app.querySelectorAll("[data-l]").forEach(c=>c.onchange=()=>{const l=ls[+c.dataset.l];c.checked?sel.add(l):sel.delete(l);save()});
+    $("#clr").onclick=()=>{deck=[];sel=new Set();save();home()};
+    app.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{
+      const q=shuf(deck.filter(w=>sel.has(w.l))).slice(0,+$("#cnt").value||10);
+      if(!q.length){alert("Select at least one lesson.");return}
+      run(b.dataset.m,q)});
+  }
+}
+
+function run(mode,q){R={mode,q,i:0,res:[],t:0};step()}
+function step(){if(R.i>=R.q.length)return done();R.t=Date.now();({dict,write,quiz})[R.mode](R.q[R.i])}
+function rec(ok){R.res.push({w:R.q[R.i],ok,ms:Date.now()-R.t});R.i++;step()}
+function frame(inner){
+  app.innerHTML=`<div class="bar"><button class="ghost" id="quit">Quit</button><span>${R.i+1} / ${R.q.length}</span><div class="prog"><i style="width:${R.i/R.q.length*100}%"></i></div></div><section class="card q">${inner}</section>`;
+  $("#quit").onclick=home;
+}
+
+function dict(w){
+  frame(`<p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><div class="row"><button class="ghost" id="ls">Listen</button></div><div id="ans" class="row"><button id="rv">Reveal answer</button></div><p class="hint">Write it on paper first, then reveal.</p>`);
+  $("#ls").onclick=()=>say(w.h);
+  $("#rv").onclick=()=>{$("#ans").outerHTML=`<div class="hz">${esc(w.h)}</div><div class="row"><button class="ok" id="y">I wrote it right</button><button class="bad" id="n">I missed it</button></div>`;$("#y").onclick=()=>rec(1);$("#n").onclick=()=>rec(0)};
+}
+
+function write(w){
+  const chars=[...w.h].filter(c=>CJK.test(c)),sz=chars.length>2?160:220;
+  frame(`<p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><div class="boxes" id="bx"></div><p id="st" class="hint">Write each character stroke by stroke. Up to one wrong stroke per character still counts.</p><div class="row" id="ctl"><button class="ghost" id="ls">Listen</button><button class="ghost" id="sa">Show answer</button></div>`);
+  $("#ls").onclick=()=>say(w.h);
+  let miss=0,fbk=false,W=[];
+  const fallback=()=>{if(fbk)return;fbk=true;$("#bx").innerHTML="";$("#st").textContent="Stroke data is unavailable for this word, so check yourself on paper.";
+    $("#ctl").innerHTML=`<button class="ghost" id="rv">Reveal answer</button>`;
+    $("#rv").onclick=()=>{$("#bx").innerHTML=`<div class="hz">${esc(w.h)}</div>`;$("#ctl").innerHTML=`<button class="ok" id="y">I wrote it right</button><button class="bad" id="n">I missed it</button>`;$("#y").onclick=()=>rec(1);$("#n").onclick=()=>rec(0)}};
+  if(typeof HanziWriter=="undefined"||!chars.length)return fallback();
+  const ink=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
+  chars.forEach(c=>{const d=document.createElement("div");d.className="tzg";$("#bx").append(d);
+    W.push(HanziWriter.create(d,c,{width:sz,height:sz,padding:12,showCharacter:false,showOutline:false,strokeColor:ink,drawingColor:ink,highlightColor:"#c0222f",leniency:1.3,onLoadCharDataError:fallback}))});
+  const go=k=>W[k].quiz({onMistake:()=>{miss++},onComplete:()=>{
+    if(fbk)return;
+    if(k+1<W.length)return go(k+1);
+    $("#st").textContent=miss?`Finished with ${miss} wrong stroke${miss>1?"s":""}.`:"Perfect, no wrong strokes.";
+    $("#ctl").innerHTML=`<button id="nx">Next</button>`;const ok=miss<=chars.length;$("#nx").onclick=()=>rec(ok)}});
+  go(0);
+  $("#sa").onclick=()=>{if(fbk)return;W.forEach(x=>{x.cancelQuiz();x.showCharacter()});$("#st").textContent="Study the strokes, then continue.";$("#ctl").innerHTML=`<button id="nx">Next</button>`;$("#nx").onclick=()=>rec(0)};
+}
+
+function quiz(w){
+  const o=shuf([w,...shuf(deck.filter(x=>x.m!==w.m)).slice(0,3)]);let pick=-1;
+  frame(`<div class="hz">${esc(w.h)}</div><p class="py">${esc(w.p)}</p><div class="opts">${o.map((x,i)=>`<button class="opt" data-i="${i}">${esc(x.m)}</button>`).join("")}</div><div class="row"><button id="cf" disabled>Confirm answer</button></div>`);
+  const bs=[...app.querySelectorAll(".opt")];
+  bs.forEach(b=>b.onclick=()=>{if(b.disabled)return;pick=+b.dataset.i;bs.forEach(x=>x.classList.toggle("on",x==b));$("#cf").disabled=false});
+  $("#cf").onclick=()=>{const ok=o[pick]===w;bs.forEach((b,i)=>{b.disabled=true;if(o[i]===w)b.classList.add("right");else if(i==pick)b.classList.add("wrong")});
+    const c=$("#cf");c.textContent="Next";c.onclick=()=>rec(ok)};
+}
+
+function done(){
+  const ok=R.res.filter(r=>r.ok).length,miss=R.res.filter(r=>!r.ok).map(r=>r.w);
+  const avg=(R.res.reduce((a,r)=>a+r.ms,0)/R.res.length/1000).toFixed(1);
+  app.innerHTML=`<section class="card"><h2>Result</h2><p class="score">${ok} / ${R.res.length}</p><p class="hint">Average ${avg} seconds per word</p>
+  ${miss.length?`<h3>Words to review</h3><ul class="miss">${miss.map(w=>`<li><span class="hz-s">${esc(w.h)}</span><span>${esc(w.p)}</span><span class="hint">${esc(w.m)}</span></li>`).join("")}</ul>`:"<p>No missed words.</p>"}
+  <div class="row">${miss.length?`<button id="rt">Practise missed words</button>`:""}<button class="ghost" id="hm">Back to start</button></div></section>`;
+  if(miss.length)$("#rt").onclick=()=>run(R.mode,shuf(miss));
+  $("#hm").onclick=home;
+}
+home();
+</script>
+</body>
+</html>
