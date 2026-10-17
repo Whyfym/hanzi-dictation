@@ -38,6 +38,8 @@ pre{background:var(--bg);padding:10px;border-radius:8px;overflow:auto;font-size:
 .opts{display:grid;gap:8px;margin:14px 0}
 .opt{background:var(--card);color:var(--ink);border:2px solid var(--line);text-align:left;padding:12px}
 .opt.on{border-color:var(--ink)}.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 18%,var(--card))}.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 18%,var(--card))}
+@media print{body>*:not(#sheet){display:none!important}#sheet{display:block;color:#000;background:#fff;font:15px/1.4 var(--ui)}#sheet li{margin:0 0 16px}.wb{height:56px;border-bottom:1px solid #000;margin-top:4px}body{background:#fff;padding:0}}
+#sheet{display:none}
 .score{font:700 3rem var(--hz);margin:0}.miss{padding-left:0;list-style:none}.miss li{padding:6px 0;border-bottom:1px solid var(--line)}.miss span+span{margin-left:8px}
 </style>
 </head>
@@ -89,7 +91,9 @@ function home(){
   <section class="card modes"><h2>Practise</h2><div class="row">
   <button data-m="dict"><b>Dictation</b><span>Hear it, write on paper, check yourself</span></button>
   <button data-m="write"><b>Write on screen</b><span>Draw each stroke with finger or stylus</span></button>
-  <button data-m="quiz"><b>Meaning quiz</b><span>Pick the meaning, then confirm</span></button></div></section>`:""}${window.mpCard?mpCard():""}`;
+  <button data-m="quiz"><b>Meaning quiz</b><span>Pick the meaning, then confirm</span></button>
+  <button data-m="arr"><b>Arrange sentence</b><span>Put the words in order</span></button></div>
+  <div class="row"><button class="ghost" id="pr">Print a test sheet with answer key</button></div></section>`:""}${window.mpCard?mpCard():""}`;
   const load=t=>{const{out,bad,sent}=parse(t);const m=$("#msg");
     if(!out.length&&!sent.length){m.innerHTML=`<span class="e">No valid words found. Check the format below.</span>`;return}
     deck=out;sents=sent;sel=new Set([...out,...sent].map(w=>w.l));save();home();
@@ -101,15 +105,16 @@ function home(){
   if(deck.length||sents.length){
     app.querySelectorAll("[data-l]").forEach(c=>c.onchange=()=>{const l=ls[+c.dataset.l];c.checked?sel.add(l):sel.delete(l);save()});
     $("#clr").onclick=()=>{deck=[];sents=[];sel=new Set();save();home()};
+    $("#pr").onclick=printSheet;
     app.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{
-      const q=shuf(deck.filter(w=>sel.has(w.l))).slice(0,+$("#cnt").value||10);
+      const q=shuf((b.dataset.m=="arr"?sents:deck).filter(w=>sel.has(w.l))).slice(0,+$("#cnt").value||10);
       if(!q.length){alert("Select at least one lesson.");return}
       run(b.dataset.m,q)});
   }
 }
 
 function run(mode,q){R={mode,q,i:0,res:[],t:0};step()}
-function step(){if(R.i>=R.q.length)return done();R.t=Date.now();({dict,write,quiz})[R.mode](R.q[R.i])}
+function step(){if(R.i>=R.q.length)return done();R.t=Date.now();({dict,write,quiz,arr})[R.mode](R.q[R.i])}
 function rec(ok,miss){R.res.push({w:R.q[R.i],ok,ms:Date.now()-R.t,miss});R.i++;step()}
 function frame(inner){
   app.innerHTML=`<div class="bar"><button class="ghost" id="quit">Quit</button><span>${R.i+1} / ${R.q.length}</span><div class="prog"><i style="width:${R.i/R.q.length*100}%"></i></div></div><section class="card q">${inner}</section>`;
@@ -151,6 +156,32 @@ function quiz(w){
   bs.forEach(b=>b.onclick=()=>{if(b.disabled)return;pick=+b.dataset.i;bs.forEach(x=>x.classList.toggle("on",x==b));$("#cf").disabled=false});
   $("#cf").onclick=()=>{const ok=o[pick]===w;bs.forEach((b,i)=>{b.disabled=true;if(o[i]===w)b.classList.add("right");else if(i==pick)b.classList.add("wrong")});
     const c=$("#cf");c.textContent="Next";c.onclick=()=>rec(ok)};
+}
+
+function arr(w){
+  const ord=[],toks=shuf(w.t);
+  frame(`<p class="mn">${esc(w.m)}</p><p class="py">${esc(w.p)}</p><div class="boxes" id="ar" style="min-height:56px;border-bottom:2px solid var(--line)"></div><div class="boxes" id="pool"></div><div class="row" id="ctl"><button id="cf" disabled>Confirm answer</button></div>`);
+  const draw=()=>{
+    $("#ar").innerHTML=ord.map((k,j)=>`<button class="ghost hz-s" data-r="${j}">${esc(toks[k])}</button>`).join("");
+    $("#pool").innerHTML=toks.map((x,k)=>ord.includes(k)?"":`<button class="ghost hz-s" data-k="${k}">${esc(x)}</button>`).join("");
+    $("#cf").disabled=ord.length!=toks.length;
+    app.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{ord.splice(+b.dataset.r,1);draw()});
+    app.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{ord.push(+b.dataset.k);draw()});
+  };
+  draw();
+  $("#cf").onclick=()=>{const ok=ord.map(k=>toks[k]).join("")==w.t.join("");
+    $("#pool").innerHTML=`<p class="${ok?"":"hint"}">${ok?"Correct.":"Not quite. Correct order: "+esc(w.t.join(" "))}</p>`;
+    $("#ctl").innerHTML=`<button id="nx">Next</button>`;$("#nx").onclick=()=>rec(ok?1:0)};
+}
+
+function printSheet(){
+  const q=shuf(deck.filter(w=>sel.has(w.l))).slice(0,+$("#cnt").value||10);
+  if(!q.length){alert("Select at least one lesson that has words.");return}
+  const sh=document.createElement("div");sh.id="sheet";
+  sh.innerHTML=`<h2>Dictation test</h2><p>Name: ______________________ Date: ______________</p><ol>${q.map(w=>`<li><b>${esc(w.p)}</b> &nbsp; ${esc(w.m)}<div class="wb"></div></li>`).join("")}</ol><div style="page-break-before:always"></div><h2>Answer key</h2><ol>${q.map(w=>`<li><span style="font:1.3rem var(--hz)">${esc(w.h)}</span> &nbsp; ${esc(w.p)} &nbsp; ${esc(w.m)}</li>`).join("")}</ol>`;
+  document.body.append(sh);
+  window.onafterprint=()=>{sh.remove();window.onafterprint=null};
+  window.print();
 }
 
 function done(){
