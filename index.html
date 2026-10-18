@@ -88,7 +88,9 @@ select{font:600 14px var(--ui);padding:8px 10px}
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="i18n.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="multiplayer.js"></script>
+<script src="extras.js"></script>
 <script>
 // Used by the multiplayer rooms (next step). The publishable key is safe to keep in client code.
 const CONFIG={supabaseUrl:"https://bsxeqczvogjptbqdvbse.supabase.co",supabaseKey:"sb_publishable_B-rFzGRvOOMxHwfjQ5q_ew_nOqstjJN"};
@@ -106,7 +108,7 @@ const MAX_MISS=5; // practice mode: up to this many wrong strokes per word still
 const SAMPLE="# Lesson 1 - Greetings\n你好 | nǐ hǎo | hello\n谢谢 | xièxie | thank you\n再见 | zàijiàn | goodbye\n对不起 | duìbuqǐ | sorry\n# Lesson 2 - Campus\n图书馆 | túshūguǎn | library\n学生 | xuésheng | student\n老师 | lǎoshī | teacher\n教室 | jiàoshì | classroom\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese\n[S] 老师 在 教室 里 | lǎoshī zài jiàoshì lǐ | The teacher is in the classroom";
 let deck=[],sents=[],sel=new Set(),R;
 try{const d=JSON.parse(localStorage.getItem("hz-deck")||"null");if(d){deck=d.deck;sents=d.sents||[];sel=new Set(d.sel)}}catch(e){}
-const save=()=>{try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,sel:[...sel]}))}catch(e){}};
+const save=()=>{try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,sel:[...sel]}))}catch(e){}if(window.xChanged)xChanged()};
 const say=t=>{try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="zh-CN";u.rate=.8;speechSynthesis.speak(u)}catch(e){}};
 
 function parse(t){
@@ -130,9 +132,10 @@ async function boot(){
   document.documentElement.lang=LANG;
   if(SB){
     try{const{data}=await SB.auth.getSession();user=data.session?data.session.user:null}catch(e){}
-    SB.auth.onAuthStateChange((ev,sess)=>{user=sess?sess.user:null;if(ev=="SIGNED_OUT"||(ev=="SIGNED_IN"&&onLogin))route()});
+    SB.auth.onAuthStateChange((ev,sess)=>{user=sess?sess.user:null;if(ev=="SIGNED_OUT"||(ev=="SIGNED_IN"&&onLogin))route();if(ev=="SIGNED_IN"&&window.xPull)xPull()});
   }
   route();
+  if(user&&window.xPull)xPull();
 }
 let authTab="in";
 function langSel(){return `<select id="lg" aria-label="Language">${LANGS.map(([c,n])=>`<option value="${c}" ${c==LANG?"selected":""}>${n}</option>`).join("")}</select>`}
@@ -187,7 +190,7 @@ function home(){
   <details><summary>${t("File format")}</summary><pre># Lesson title (optional)\nhanzi | pinyin | meaning\n你好 | nǐ hǎo | hello\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese</pre><p class="hint">One word per line. Separate with | or a tab. Write the meaning in any language you like. Lines starting with [S] are sentences for the arrange game: put spaces between the words.</p></details></section>
   ${has?`<section class="card"><h2>${t("Lessons")}</h2><p class="hint" style="margin:0 0 6px">${t("{0} words, {1} sentences",deck.length,sents.length)}</p>${ls.map((l,i)=>`<label class="ls"><input type="checkbox" data-l="${i}" ${sel.has(l)?"checked":""}><span>${esc(l)}</span><span class="hint" style="margin-left:auto">${t("{0} words, {1} sentences",deck.filter(w=>w.l==l).length,sents.filter(w=>w.l==l).length)}</span></label>`).join("")}
   <div class="row"><label>${t("Words per round")} <input type="number" id="cnt" min="1" max="200" value="10" style="width:76px"></label><button class="ghost" id="clr">${t("Remove list")}</button></div></section>`:""}
-  </div><div class="col">
+  </div><div class="col">${window.xToday?xToday():""}
   ${has?`<section class="card"><h2>${t("Practise")}</h2><div class="tiles">
   <button class="tile" data-m="dict"><i>听</i><b>${t("Dictation")}</b><span>${t("Hear it, write on paper")}</span></button>
   <button class="tile" data-m="write"><i>写</i><b>${t("Write on screen")}</b><span>${t("Draw each stroke")}</span></button>
@@ -203,12 +206,13 @@ function home(){
   $("#sample").onclick=()=>load(SAMPLE);
   $("#file").onchange=e=>{const f=e.target.files[0];if(f)f.text().then(load)};
   if(window.mpBind)mpBind();
+  if(window.xBind)xBind();
   if(has){
     app.querySelectorAll("[data-l]").forEach(c=>c.onchange=()=>{const l=ls[+c.dataset.l];c.checked?sel.add(l):sel.delete(l);save()});
     $("#clr").onclick=()=>{deck=[];sents=[];sel=new Set();save();home()};
     $("#pr").onclick=printSheet;
     app.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{
-      const a=b.dataset.m=="arr",q=shuf((a?sents:deck).filter(w=>sel.has(w.l))).slice(0,+$("#cnt").value||10);
+      const a=b.dataset.m=="arr",q=(window.xPick||((p,n)=>shuf(p).slice(0,n)))((a?sents:deck).filter(w=>sel.has(w.l)),+$("#cnt").value||10);
       if(!q.length){alert(a?t("Select at least one lesson that has sentences."):t("Select at least one lesson that has words."));return}
       run(b.dataset.m,q)});
   }
@@ -219,7 +223,7 @@ function home(){
 
 function run(mode,q){R={mode,q,i:0,res:[],t:0};step()}
 function step(){if(R.i>=R.q.length)return done();R.t=Date.now();({dict,write,quiz,arr})[R.mode](R.q[R.i])}
-function rec(ok,miss){R.res.push({w:R.q[R.i],ok,ms:Date.now()-R.t,miss});R.i++;step()}
+function rec(ok,miss){if(window.xRec)xRec(R.q[R.i],ok);R.res.push({w:R.q[R.i],ok,ms:Date.now()-R.t,miss});R.i++;step()}
 function frame(inner){
   app.innerHTML=`<div class="bar"><button class="ghost" id="quit">${t("Quit")}</button><span>${R.i+1} / ${R.q.length}</span><div class="prog"><i style="width:${R.i/R.q.length*100}%"></i></div></div><section class="card q">${inner}</section>`;
   $("#quit").onclick=home;
@@ -233,7 +237,7 @@ function dict(w){
 
 function write(w){
   const chars=[...w.h].filter(c=>CJK.test(c)),sz=chars.length>2?160:220;
-  frame(`<p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><div class="boxes" id="bx"></div><p id="st" class="hint">${t("Write each stroke. Up to {0} wrong strokes still count as correct; giving up counts as wrong.",MAX_MISS)}</p><div class="row" id="ctl"><button class="ghost" id="ls">${t("Listen")}</button><button class="ghost" id="sa">${t("Show answer")}</button></div>`);
+  frame(`<p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><div class="boxes" id="bx"></div><p id="st" class="hint">${t("Write each stroke. Up to {0} wrong strokes still count as correct; giving up counts as wrong.",MAX_MISS)}</p><div class="row" id="ctl"><button class="ghost" id="ls">${t("Listen")}</button><button class="ghost" id="hn">${t("Hint")}</button><button class="ghost" id="sa">${t("Show answer")}</button></div>`);
   $("#ls").onclick=()=>say(w.h);
   let miss=0,fbk=false,W=[];
   const fallback=()=>{if(fbk)return;fbk=true;$("#bx").innerHTML="";$("#st").textContent="Stroke data is unavailable for this word, so check yourself on paper.";
@@ -250,6 +254,7 @@ function write(w){
     $("#st").textContent=(miss?t("Finished with {0} wrong strokes.",miss):t("Perfect, no wrong strokes."))+" "+(ok?t("Counted as correct."):t("Counted as wrong."));
     $("#ctl").innerHTML=`<button id="nx">${t("Next")}</button>`;$("#nx").onclick=()=>rec(ok,miss)}});
   go(0);
+  $("#hn").onclick=()=>{if(fbk)return;W.forEach(x=>x.showOutline());setTimeout(()=>W.forEach(x=>x.hideOutline()),1500)};
   $("#sa").onclick=()=>{if(fbk)return;W.forEach(x=>{x.cancelQuiz();x.showCharacter()});$("#st").textContent=t("You gave up, so this counts as wrong.");$("#ctl").innerHTML=`<button id="nx">${t("Next")}</button>`;$("#nx").onclick=()=>rec(0,miss)};
 }
 
