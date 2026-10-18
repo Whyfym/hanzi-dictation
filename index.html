@@ -140,6 +140,7 @@ button.ghost,.tile,.opt,.tab,.link,.pfb{box-shadow:none}
 .face.front{border-top:5px solid var(--acc2)}.face.back{transform:rotateY(180deg);border-top:5px solid var(--red)}
 .stamp{position:absolute;top:16px;z-index:2;padding:4px 12px;border:3px solid;border-radius:10px;font-weight:800;opacity:0;pointer-events:none}
 .stamp.l{right:16px;color:var(--bad);border-color:var(--bad);transform:rotate(8deg)}.stamp.r{left:16px;color:var(--ok);border-color:var(--ok);transform:rotate(-8deg)}
+.face .hz{font-size:clamp(2.4rem,11vw,4.4rem);overflow-wrap:anywhere;margin:0 0 8px}
 .fcbtns{display:flex;gap:12px;margin-top:16px}.fcbtns button{flex:1}
 @media print{body>*:not(#sheet){display:none!important}#sheet{display:block;color:#000;background:#fff;font:15px/1.4 var(--ui)}#sheet li{margin:0 0 16px}.wb{height:56px;border-bottom:1px solid #000;margin-top:4px}body{background:#fff;padding:0}}
 #sheet{display:none}
@@ -413,8 +414,8 @@ function flash(q0){
     const w=cards[i];busy=false;
     app.innerHTML=`<div class="bar"><button class="ghost" id="quit">${t("Quit")}</button><span>${t("Round {0}",round)} · ${i+1}/${cards.length}</span><div class="prog"><i style="width:${i/cards.length*100}%"></i></div></div>
     <div class="fcwrap"><div class="fc" id="fc"><div class="fci">
-    <div class="face front"><p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><button class="ghost sm" id="fl">${t("Listen")}</button><p class="hint" style="margin-top:14px">${t("Tap card to flip")}</p></div>
-    <div class="face back"><div class="hz">${esc(w.h)}</div><p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p></div></div>
+    <div class="face front"><div class="hz">${esc(w.h)}</div><button class="ghost sm" id="fl">${t("Listen")}</button><p class="hint" style="margin-top:14px">${t("Tap card to flip")}</p></div>
+    <div class="face back"><p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><button class="ghost sm" id="fl2">${t("Listen")}</button></div></div>
     <div class="stamp l">${t("Not memorized yet")}</div><div class="stamp r">${t("Memorized")}</div></div>
     <div class="fcbtns"><button class="bad" id="fn">${t("Not memorized yet")}</button><button class="ok" id="fy">${t("Memorized")}</button></div></div>`;
     const fc=$("#fc"),sl=fc.querySelector(".stamp.l"),sr=fc.querySelector(".stamp.r");
@@ -430,6 +431,7 @@ function flash(q0){
     fc.onpointerup=()=>{if(!drag)return;drag=false;if(dx>90)decide(true,1);else if(dx<-90)decide(false,-1);else{reset();if(!moved)flip()}};
     fc.onpointercancel=()=>{drag=false;reset()};
     $("#fl").onclick=ev=>{ev.stopPropagation();say(w.h)};
+    $("#fl2").onclick=ev=>{ev.stopPropagation();say(w.h)};
     $("#fy").onclick=()=>decide(true,1);$("#fn").onclick=()=>decide(false,-1);
     $("#quit").onclick=()=>{window._fk=null;home()};
     window._fk={flip,decide};
