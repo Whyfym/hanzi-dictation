@@ -48,15 +48,15 @@ const due=()=>{const now=Date.now();return deck.filter(w=>sel.has(w.l)&&prog[w.h
 
 window.xToday=()=>{
   const td=day(),n=daily.date===td?daily.n:0,g=daily.goal,du=due().length,sk=daily.last===td||daily.last===day(-1)?daily.streak:0;
-  return `<section class="card"><h2>${t("Today")}</h2>
+  return `<section class="card c-today"><h2>${t("Today")}</h2>
   <div class="stats"><div><b>${sk}</b><span>${t("Day streak")}</span></div><div><b>${n}/${g}</b><span>${t("Daily goal")}</span></div><div><b>${du}</b><span>${t("Due for review")}</span></div></div>
   <div class="prog"><i style="width:${Math.min(100,n/g*100)}%"></i></div>
   <div class="row"><button id="xr" ${du?"":"disabled"}>${t("Review due words")}</button>
   <label class="hint">${t("Goal")} <input type="number" id="xg" min="1" max="200" value="${g}" style="width:64px"></label>
   <label class="hint"><input type="checkbox" id="xm" ${mute?"":"checked"}> ${t("Sound")}</label></div></section>
-  <section class="card"><h2>${t("Share")}</h2><div class="row"><button class="ghost" id="xs" ${deck.length||sents.length?"":"disabled"}>${t("Share selected lessons")}</button>
+  <section class="card c-share"><h2>${t("Share")}</h2><div class="row"><button class="ghost" id="xs" ${deck.length||sents.length?"":"disabled"}>${t("Share selected lessons")}</button>
   <input id="xi" maxlength="6" placeholder="${t("Share code")}" style="width:150px;text-transform:uppercase"><button class="ghost" id="xo">${t("Import")}</button></div><div id="xsm" class="hint" role="status"></div></section>
-  <section class="card"><h2>${t("Weekly leaderboard")}</h2><ol id="lb" class="miss"></ol><div id="lbm" class="hint"></div></section>`;
+  <section class="card c-board"><h2>${t("Weekly leaderboard")}</h2><ol id="lb" class="miss"></ol><div id="lbm" class="hint"></div></section>`;
 };
 window.xBind=()=>{
   const g=$("#xg");if(!g)return;
