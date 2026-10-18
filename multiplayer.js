@@ -10,34 +10,34 @@ const players=()=>Object.entries(G.ch.presenceState()).map(([id,v])=>({id,name:v
 const bd=b=>`<ol class="miss">${b.map((x,i)=>`<li>${i+1}. ${esc(x.name)} <span class="hint">${x.score}</span></li>`).join("")}</ol>`;
 const speed=(ms,lim)=>Math.max(0,1-ms/(lim*1000));
 
-window.mpCard=()=>`<section class="card"><h2>Play with classmates</h2>
-<div class="row">${deck.length||sents.length?'<button id="mh">Host a game</button>':'<span class="hint">Load a word list to host a game.</span>'}</div>
-<div class="row"><input id="mc" inputmode="numeric" maxlength="6" placeholder="Room code" style="width:120px"><input id="mn" maxlength="14" placeholder="Nickname" style="width:150px"><button class="ghost" id="mj">Join</button></div>
+window.mpCard=()=>`<section class="card"><h2>${t("Play with classmates")}</h2>
+<div class="row">${deck.length||sents.length?`<button id="mh">${t("Host a game")}</button>`:`<span class="hint">${t("Load a word list to host a game.")}</span>`}</div>
+<div class="row"><input id="mc" inputmode="numeric" maxlength="6" placeholder="${t("Room code")}" value="${esc((new URLSearchParams(location.search).get("room")||"").replace(/\D/g,"").slice(0,6))}" style="width:120px"><input id="mn" maxlength="14" placeholder="${t("Nickname")}" value="${esc(displayName())}" style="width:150px"><button class="ghost" id="mj">${t("Join")}</button></div>
 <div id="me" class="hint" aria-live="polite"></div></section>`;
 window.mpBind=()=>{
   const h=$("#mh");if(h)h.onclick=hostSetup;
   $("#mj").onclick=()=>{const c=$("#mc").value.trim(),n=$("#mn").value.trim();
-    if(!/^\d{6}$/.test(c)||!n){$("#me").textContent="Enter the 6-digit room code and a nickname.";return}
+    if(!/^\d{6}$/.test(c)||!n){$("#me").textContent=t("Enter the 6-digit room code and a nickname.");return}
     connect(c,n,false)};
 };
 
 function hostSetup(){
   const ws=deck.filter(w=>sel.has(w.l)),ss=sents.filter(w=>sel.has(w.l));
-  const row=(id,label,sec,ok,why)=>`<label class="ls"><input type="checkbox" id="t${id}" ${ok?"checked":"disabled"}> ${label}, seconds <input type="number" id="l${id}" value="${sec}" min="5" max="300" style="width:70px"> ${ok?"":`<span class="hint">${why}</span>`}</label>`;
-  app.innerHTML=`<section class="card"><h2>Game settings</h2>
-  <label class="ls">Questions <input type="number" id="gn" value="10" min="1" max="50" style="width:70px"></label>
+  const row=(id,label,sec,ok,why)=>`<label class="ls"><input type="checkbox" id="t${id}" ${ok?"checked":"disabled"}> ${label}, ${t("seconds")} <input type="number" id="l${id}" value="${sec}" min="5" max="300" style="width:70px"> ${ok?"":`<span class="hint">${why}</span>`}</label>`;
+  app.innerHTML=`<section class="card"><h2>${t("Game settings")}</h2>
+  <label class="ls">${t("Questions")} <input type="number" id="gn" value="10" min="1" max="50" style="width:70px"></label>
   <p class="hint">Tick one type for a single-type game, or several to mix them.</p>
-  ${row("q","Meaning quiz",15,deck.length>=4&&ws.length>0,"Needs at least 4 words in your list")}
-  ${row("w","Write on screen",45,ws.length>0,"No words in the selected lessons")}
-  ${row("a","Arrange sentence",30,ss.length>0,"Add [S] sentence lines to your file")}
+  ${row("q",t("Meaning quiz"),15,deck.length>=4&&ws.length>0,"Needs at least 4 words in your list")}
+  ${row("w",t("Write on screen"),45,ws.length>0,"No words in the selected lessons")}
+  ${row("a",t("Arrange sentence"),30,ss.length>0,"Add [S] sentence lines to your file")}
   <p class="hint">Selected lessons have ${ws.length} words and ${ss.length} sentences.</p>
-  <div class="row"><button id="go">Create room</button><button class="ghost" id="bk">Back</button></div></section>`;
+  <div class="row"><button id="go">${t("Create room")}</button><button class="ghost" id="bk">${t("Back")}</button></div></section>`;
   $("#bk").onclick=home;
   $("#go").onclick=()=>{
     const on=id=>{const e=$("#t"+id);return !!e&&e.checked};
     const s={n:+$("#gn").value||10,tq:on("q"),tw:on("w"),ta:on("a"),lq:+$("#lq").value||15,lw:+$("#lw").value||45,la:+$("#la").value||30,ws,ss};
     if(!(s.tq||s.tw||s.ta)){alert("Tick at least one question type.");return}
-    const name=(prompt("Your nickname","Host")||"Host").slice(0,14);
+    const name=(displayName()||prompt("Your nickname","Host")||"Host").slice(0,14);
     connect(String(100000+Math.floor(Math.random()*900000)),name,true,s);
   };
 }
@@ -46,14 +46,17 @@ function connect(code,name,host,s){
   if(typeof supabase=="undefined"){alert("The connection library did not load. Check your internet connection.");return}
   if(G)leave(true);
   G={code,name,host,s,id:rid(),miss:[],score:{}};
-  G.sb=supabase.createClient(CONFIG.supabaseUrl,CONFIG.supabaseKey);
+  G.sb=supabase.createClient(CONFIG.supabaseUrl,CONFIG.supabaseKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
   G.ch=G.sb.channel("hz-"+code,{config:{broadcast:{self:true},presence:{key:G.id}}});
-  G.ch.on("broadcast",{event:"m"},({payload})=>onMsg(payload)).on("presence",{event:"sync"},sync)
+  G.ch.on("broadcast",{event:"m"},({payload})=>onMsg(payload)).on("presence",{event:"sync"},sync).on("presence",{event:"join"},onJoin)
     .subscribe(status=>{
       if(status==="SUBSCRIBED"){G.ch.track({name,host});lobby();
         if(!host)setTimeout(()=>{if(G&&!G.on&&!players().some(p=>p.host)){leave(true);home();alert("Room not found. Check the code and try again.")}},3000)}
       else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){if(G){leave(true);home();alert("Could not connect to the game server. Try again.")}}
     });
+}
+function onJoin({key}){
+  if(G&&G.host&&G.live&&key!==G.id){const rem=Math.max(3,Math.ceil(G.qmsg.lim-(Date.now()-G.qt)/1000));send({...G.qmsg,lim:rem})}
 }
 function leave(quiet){
   if(G){try{G.ch.unsubscribe();G.sb.removeAllChannels()}catch(e){}clearTimeout(G.tm);clearInterval(G.iv);G=null}
@@ -67,12 +70,12 @@ function sync(){
 function lobby(){
   if(!G||G.on)return;
   const ps=players();
-  app.innerHTML=`<section class="card q"><p class="hint">Room code</p><div class="code">${G.code}</div>
-  <p class="hint">${G.host?"Share this code with your classmates, then start.":"Waiting for the host to start."}</p>
+  app.innerHTML=`<section class="card q"><p class="hint">${t("Room code")}</p><div class="code">${G.code}</div>${G.host?`<div id="qr" class="qr"></div>`:""}
+  <p class="hint">${G.host?t("Share this code with your classmates, then start."):t("Waiting for the host to start.")}</p>
   <div class="pl">${ps.map(p=>`<span class="chip">${esc(p.name)}</span>`).join("")}</div>
-  <div class="row">${G.host?'<button id="gs">Start game</button>':""}<button class="ghost" id="lv">Leave</button></div></section>`;
+  <div class="row">${G.host?`<button id="gs">${t("Start game")}</button>`:""}<button class="ghost" id="lv">${t("Leave")}</button></div></section>`;
   $("#lv").onclick=()=>leave();
-  if(G.host)$("#gs").onclick=hostRun;
+  if(G.host){$("#gs").onclick=hostRun;if(window.qrcode&&$("#qr")){try{const q=qrcode(0,"M");q.addData(location.origin+location.pathname+"?room="+G.code);q.make();$("#qr").innerHTML=q.createSvgTag({cellSize:5,margin:2,scalable:true})}catch(e){}}}
 }
 
 async function hostRun(){
@@ -89,9 +92,10 @@ async function hostRun(){
     if(type=="quiz"){const o=shuf([w,...shuf(deck.filter(x=>x.m!==w.m)).slice(0,3)]);opts=o.map(x=>x.m);ci=o.indexOf(w)}
     if(type=="arrange")toks=shuf(w.t);
     G.cur={i,ans:{}};
-    send({t:"q",i,n:qs.length,type,lim,w:{h:w.h,p:w.p,m:w.m},opts,toks});
+    G.qmsg={t:"q",i,n:qs.length,type,lim,w:{h:w.h,p:w.p,m:w.m},opts,toks};G.qt=Date.now();G.live=true;send(G.qmsg);
     await new Promise(r=>{G.done=r;G.tm=setTimeout(r,(lim+3)*1000)});
     if(!G)return;
+    G.live=false;
     const ps=players();
     ps.forEach(p=>{
       const a=G.cur.ans[p.id];let pts=0,ok=false;
@@ -117,10 +121,11 @@ function onMsg(m){
   if(m.t=="a"){
     if(G.host&&G.cur&&m.i===G.cur.i&&!G.cur.ans[m.id]){G.cur.ans[m.id]=m;
       if(Object.keys(G.cur.ans).length>=players().length){clearTimeout(G.tm);G.done&&G.done()}}
-  }else if(m.t=="q"){G.on=true;G.q=m;G.sent=false;gq(m)}
+  }else if(m.t=="q"){if(G.q&&G.q.i===m.i)return;G.on=true;G.q=m;G.sent=false;gq(m)}
   else if(m.t=="r"||m.t=="end"){
     clearInterval(G.iv);G.on=true;
     const me=m.board.find(b=>b.id==G.id);if(me&&!me.ok&&G.q)G.miss.push({...G.q.w,s:G.q.type=="arrange"});
+    if(me&&G.q&&window.xRec)xRec(G.q.w,!!me.ok);
     if(m.t=="end"){G.ended=true;fin(m)}else res(m);
   }
 }
@@ -129,7 +134,7 @@ function submit(a){
   if(!G||G.sent)return;
   G.sent=true;clearInterval(G.iv);
   send({t:"a",id:G.id,i:G.q.i,...a});
-  const c=$(".q");if(c)c.innerHTML=`<p class="py">Answer sent</p><p class="hint">Waiting for the other players.</p>`;
+  const c=$(".q");if(c)c.innerHTML=`<p class="py">${t("Answer sent")}</p><p class="hint">${t("Waiting for the other players.")}</p>`;
 }
 function gframe(m,inner,onTimeout){
   app.innerHTML=`<div class="bar"><span>${m.i+1} / ${m.n}</span><div class="prog"><i id="tb" style="width:100%"></i></div><span id="tt">${m.lim}</span></div><section class="card q">${inner}</section>`;
@@ -144,7 +149,7 @@ function gframe(m,inner,onTimeout){
 function gq(m){
   if(m.type=="quiz"){
     let pick=-1;
-    const t0=gframe(m,`<div class="hz">${esc(m.w.h)}</div><p class="py">${esc(m.w.p)}</p><div class="opts">${m.opts.map((x,i)=>`<button class="opt" data-i="${i}">${esc(x)}</button>`).join("")}</div><div class="row"><button id="cf" disabled>Confirm answer</button></div>`,
+    const t0=gframe(m,`<div class="hz">${esc(m.w.h)}</div><p class="py">${esc(m.w.p)}</p><div class="opts">${m.opts.map((x,i)=>`<button class="opt" data-i="${i}">${esc(x)}</button>`).join("")}</div><div class="row"><button id="cf" disabled>${t("Confirm answer")}</button></div>`,
       ()=>submit({pick,ms:m.lim*1000}));
     const bs=[...app.querySelectorAll(".opt")];
     bs.forEach(b=>b.onclick=()=>{pick=+b.dataset.i;bs.forEach(x=>x.classList.toggle("on",x==b));$("#cf").disabled=false});
@@ -153,7 +158,7 @@ function gq(m){
   }
   if(m.type=="arrange"){
     const ord=[];
-    const t0=gframe(m,`<p class="mn">${esc(m.w.m)}</p><p class="py">${esc(m.w.p)}</p><div class="pl" id="ar" style="min-height:56px;border-bottom:2px solid var(--line)"></div><div class="pl" id="pool"></div><div class="row"><button id="cf" disabled>Confirm answer</button></div>`,
+    const t0=gframe(m,`<p class="mn">${esc(m.w.m)}</p><p class="py">${esc(m.w.p)}</p><div class="pl" id="ar" style="min-height:56px;border-bottom:2px solid var(--line)"></div><div class="pl" id="pool"></div><div class="row"><button id="cf" disabled>${t("Confirm answer")}</button></div>`,
       ()=>submit({ord,ms:m.lim*1000}));
     const draw=()=>{
       $("#ar").innerHTML=ord.map((k,j)=>`<button class="ghost hz-s" data-r="${j}">${esc(m.toks[k])}</button>`).join("");
@@ -167,7 +172,7 @@ function gq(m){
     return;
   }
   const P={done:0,total:0,miss:0};
-  const t0=gframe(m,`<p class="py">${esc(m.w.p)}</p><p class="mn">${esc(m.w.m)}</p><div class="boxes" id="bx"></div><p id="st2" class="hint">Loading characters</p>`,
+  const t0=gframe(m,`<p class="py">${esc(m.w.p)}</p><p class="mn">${esc(m.w.m)}</p><div class="boxes" id="bx"></div><p id="st2" class="hint">${t("Loading characters")}</p>`,
     ()=>submit({ok:false,done:P.done,total:P.total,miss:P.miss,ms:m.lim*1000}));
   const chars=[...m.w.h].filter(c=>CJK.test(c));
   if(typeof HanziWriter=="undefined"||!chars.length)return submit({ok:false,done:0,total:0,miss:0,ms:0});
@@ -175,7 +180,7 @@ function gq(m){
     if(!G||G.sent||G.q!==m)return;
     P.total=ds.reduce((a,d)=>a+d.strokes.length,0);const max=2*P.total,W=[];
     const ink=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim(),sz=chars.length>2?160:220;
-    const info=()=>{const e=$("#st2");if(e)e.textContent=`Strokes done: ${P.done} of ${P.total}. Wrong strokes: ${P.miss} of ${max} allowed`};info();
+    const info=()=>{const e=$("#st2");if(e)e.textContent=t("Strokes done: {0} of {1}. Wrong strokes: {2} of {3} allowed",P.done,P.total,P.miss,max)};info();
     chars.forEach(c=>{const d=document.createElement("div");d.className="tzg";$("#bx").append(d);
       W.push(HanziWriter.create(d,c,{width:sz,height:sz,padding:12,showCharacter:false,showOutline:false,strokeColor:ink,drawingColor:ink,highlightColor:"#c0222f",leniency:1.3}))});
     const fail=()=>{W.forEach(x=>x.cancelQuiz());submit({ok:false,done:P.done,total:P.total,miss:P.miss,ms:Date.now()-t0})};
@@ -189,13 +194,14 @@ function gq(m){
 
 function res(m){
   const me=m.board.find(b=>b.id==G.id)||{};
-  app.innerHTML=`<section class="card"><h2>${me.ok?"Correct":me.pts?"Partly done":"Not this time"}${me.pts?" +"+me.pts:""}</h2><p class="hint">Answer: <b>${esc(m.right)}</b></p>${bd(m.board.slice(0,5))}<p class="hint">The next question starts soon.</p></section>`;
+  app.innerHTML=`<section class="card"><h2>${me.ok?t("Correct"):me.pts?t("Partly done"):t("Not this time")}${me.pts?" +"+me.pts:""}</h2><p class="hint">${t("Answer:")} <b>${esc(m.right)}</b></p>${bd(m.board.slice(0,5))}<p class="hint">${t("The next question starts soon.")}</p></section>`;
 }
 function fin(m){
+  {const me0=m.board.find(b=>b.id==G.id);if(me0&&window.xScore)xScore(me0.score)}
   const ms=G.miss.filter(w=>!w.s).map(w=>({...w,l:"Missed"})),all=G.miss;
-  app.innerHTML=`<section class="card"><h2>Final scores</h2>${bd(m.board)}
-  ${all.length?`<h3>Your missed words</h3><ul class="miss">${all.map(w=>`<li><span class="hz-s">${esc(w.h)}</span><span>${esc(w.p)}</span><span class="hint">${esc(w.m)}</span></li>`).join("")}</ul>`:"<p>You answered everything correctly.</p>"}
-  <div class="row">${ms.length?'<button id="pm">Practise missed words</button>':""}<button class="ghost" id="hm2">Back to start</button></div></section>`;
+  app.innerHTML=`<section class="card"><h2>${t("Final scores")}</h2>${bd(m.board)}
+  ${all.length?`<h3>${t("Your missed words")}</h3><ul class="miss">${all.map(w=>`<li><span class="hz-s">${esc(w.h)}</span><span>${esc(w.p)}</span><span class="hint">${esc(w.m)}</span></li>`).join("")}</ul>`:`<p>${t("You answered everything correctly.")}</p>`}
+  <div class="row">${ms.length?`<button id="pm">${t("Practise missed words")}</button>`:""}<button class="ghost" id="hm2">${t("Back to start")}</button></div></section>`;
   if(ms.length)$("#pm").onclick=()=>{leave(true);run("write",shuf(ms))};
   $("#hm2").onclick=()=>leave();
 }
