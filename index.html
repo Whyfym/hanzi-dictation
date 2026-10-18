@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zhongwenfy</title>
+<script>try{var _t=localStorage.getItem("zw-theme");if(_t&&_t!="auto")document.documentElement.dataset.theme=_t}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;800&family=Noto+Serif+SC:wght@600;800&display=swap" rel="stylesheet">
 <style>
@@ -79,6 +80,57 @@ select{font:600 14px var(--ui);padding:8px 10px}
 .feat i{position:absolute;right:8px;bottom:-14px;font:800 4.4rem/1 var(--hz);color:var(--red);opacity:.15;font-style:normal}
 .feat b{display:block;position:relative}.feat span{display:block;position:relative;font-size:13.5px;color:var(--mut)}
 .pfb{background:none;border:0;color:var(--ink);padding:0;display:flex;align-items:center;gap:8px;font-weight:700}.pfimg{width:72px;height:72px;border-radius:50%;object-fit:cover;background:var(--soft);flex:none}.pfhead{display:flex;gap:16px;align-items:center}
+/* mobile and touch refinements */
+:root{color-scheme:light dark}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.tzg svg{touch-action:none;max-width:100%}
+label.ls{flex-wrap:wrap}
+@media(max-width:560px){
+ body{padding-left:12px;padding-right:12px}
+ .top{flex-wrap:wrap;row-gap:10px}
+ .top>.who{width:100%;justify-content:space-between}
+ .top>.who>.who{margin-left:auto}
+ .nm{max-width:84px}
+ .card{padding:16px}
+ h1{font-size:2rem}
+ .tiles{gap:10px}.tile{padding:14px;min-height:96px}
+ .row{gap:8px}.row>button{flex:1 1 auto}
+ .hz{font-size:3.6rem}
+}
+@media(pointer:coarse){button.sm{padding:10px 14px}button,select,input:not([type=checkbox]),textarea{min-height:44px}input[type=checkbox]{width:22px;height:22px}}
+/* themes, colour and layout */
+:root{--acc2:#e9a23b;--onacc:#fff}
+@media(prefers-color-scheme:dark){:root{--acc2:#f6c453;--onacc:#2a0a10}}
+[data-theme=sakura],[data-theme=matcha],[data-theme=ocean]{--card:#fff;--ok:#1b7f3b;--bad:#c2243b;--onacc:#fff;--sh:0 1px 2px rgba(40,20,40,.06),0 10px 28px -14px rgba(40,20,40,.25);color-scheme:light}
+[data-theme=sunset],[data-theme=midnight]{--sh:0 1px 2px rgba(0,0,0,.4),0 10px 28px -14px rgba(0,0,0,.65);color-scheme:dark}
+[data-theme=sakura]{--bg:#fff1f5;--ink:#3a1226;--mut:#86546b;--line:#f2cddb;--soft:#fde2ea;--red:#d6336c;--acc2:#ff8a5b}
+[data-theme=matcha]{--bg:#eef7e8;--ink:#15301d;--mut:#4f6e57;--line:#cde3c4;--soft:#dff0d6;--red:#2b8a3e;--acc2:#f2a900}
+[data-theme=ocean]{--bg:#e7f3fb;--ink:#0b2540;--mut:#4a6882;--line:#c2dcef;--soft:#d6eaf7;--red:#0b7fd0;--acc2:#14b8a6}
+[data-theme=sunset]{--bg:#1c1230;--card:#2a1b46;--ink:#fdf0e6;--mut:#c3abcd;--line:#43306a;--soft:#35245a;--red:#ff7a45;--acc2:#ff4f8b;--onacc:#2b0d00;--ok:#4fd6a0;--bad:#ff8a93}
+[data-theme=midnight]{--bg:#060a13;--card:#0e1525;--ink:#e8f1ff;--mut:#8ca2c4;--line:#1d2c49;--soft:#15203a;--red:#22d3ee;--acc2:#a78bfa;--onacc:#03222b;--ok:#34d399;--bad:#fb7185}
+html{background:var(--bg)}
+body{background:radial-gradient(800px 420px at 90% -8%,color-mix(in srgb,var(--red) 18%,transparent),transparent),radial-gradient(700px 380px at -8% 0,color-mix(in srgb,var(--acc2) 16%,transparent),transparent),var(--bg);background-repeat:no-repeat;min-height:100vh}
+button{background:var(--red);color:var(--onacc);border-color:var(--red);box-shadow:0 8px 18px -12px var(--red)}
+button.ghost,.tile,.opt,.tab,.link,.pfb{box-shadow:none}
+.seal{color:var(--onacc)}
+.prog i{background:linear-gradient(90deg,var(--red),var(--acc2))}
+.opt.on{border-color:var(--red)}.score{color:var(--red)}
+.hero h1{background:linear-gradient(90deg,var(--red),var(--acc2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sels{display:flex;gap:8px}
+.tile{--tc:var(--red);border-left:4px solid var(--tc)}.tile i{color:var(--tc);opacity:.22}.tile:hover{border-color:var(--tc)}
+.tile[data-m=dict]{--tc:#f59e0b}.tile[data-m=write]{--tc:#f43f5e}.tile[data-m=quiz]{--tc:#0ea5e9}.tile[data-m=arr]{--tc:#8b5cf6}
+.feat{border-top:4px solid var(--tc,var(--red))}.feat i{color:var(--tc,var(--red))}
+.feat:nth-child(1){--tc:#0ea5e9}.feat:nth-child(2){--tc:#f59e0b}.feat:nth-child(3){--tc:#f43f5e}.feat:nth-child(4){--tc:#10b981}.feat:nth-child(5){--tc:#8b5cf6}.feat:nth-child(6){--tc:#fb923c}.feat:nth-child(7){--tc:#14b8a6}
+.stats>div:nth-child(1) b{color:#d97706}.stats>div:nth-child(2) b{color:var(--red)}.stats>div:nth-child(3) b{color:#0284c7}
+.c-today{background:linear-gradient(135deg,color-mix(in srgb,var(--red) 14%,var(--card)),color-mix(in srgb,var(--acc2) 12%,var(--card)))}
+.grid{grid-template-columns:1fr;align-items:start}.grid .col{display:contents}
+.c-today{order:1}.c-prac{order:2}.c-words{order:3}.c-less{order:4}.c-mp{order:5}.c-share{order:6}.c-board{order:7}
+.nodeck .c-words{order:2}.nodeck .c-prac{order:3}
+@media(min-width:880px){
+ .grid{grid-template-columns:1fr 1fr;grid-template-areas:"today today" "prac words" "mp less" "share board";gap:20px}
+ .c-today{grid-area:today}.c-prac{grid-area:prac}.c-words{grid-area:words}.c-less{grid-area:less}.c-mp{grid-area:mp}.c-share{grid-area:share}.c-board{grid-area:board}
+}
+@media(max-width:560px){.top>.who{flex-wrap:wrap;gap:8px}.sels{width:100%}.sels select{flex:1;min-width:0}}
 @media print{body>*:not(#sheet){display:none!important}#sheet{display:block;color:#000;background:#fff;font:15px/1.4 var(--ui)}#sheet li{margin:0 0 16px}.wb{height:56px;border-bottom:1px solid #000;margin-top:4px}body{background:#fff;padding:0}}
 #sheet{display:none}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -139,8 +191,11 @@ async function boot(){
   if(user&&window.xPull)xPull();
 }
 let authTab="in";
-function langSel(){return `<select id="lg" aria-label="Language">${LANGS.map(([c,n])=>`<option value="${c}" ${c==LANG?"selected":""}>${n}</option>`).join("")}</select>`}
-function bindLang(){const e=$("#lg");if(e)e.onchange=()=>{LANG=e.value;try{localStorage.setItem("zw-lang",LANG)}catch(x){}document.documentElement.lang=LANG;route()}}
+const THEMES=[["auto","Auto"],["sakura","🌸 Sakura"],["matcha","🍵 Matcha"],["ocean","🌊 Ocean"],["sunset","🌇 Sunset"],["midnight","🌌 Midnight"]];
+let THEME="auto";try{THEME=localStorage.getItem("zw-theme")||"auto"}catch(x){}
+const setTheme=v=>{THEME=v;try{localStorage.setItem("zw-theme",v)}catch(x){}if(v=="auto")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=v};
+function langSel(){return `<span class="sels"><select id="th" aria-label="Theme">${THEMES.map(([c,n])=>`<option value="${c}" ${c==THEME?"selected":""}>${n}</option>`).join("")}</select><select id="lg" aria-label="Language">${LANGS.map(([c,n])=>`<option value="${c}" ${c==LANG?"selected":""}>${n}</option>`).join("")}</select></span>`}
+function bindLang(){const h=$("#th");if(h)h.onchange=()=>setTheme(h.value);const e=$("#lg");if(e)e.onchange=()=>{LANG=e.value;try{localStorage.setItem("zw-lang",LANG)}catch(x){}document.documentElement.lang=LANG;route()}}
 const feats=()=>[["词",t("Your own word lists"),t("Upload a TXT file with hanzi, pinyin and meanings in any language.")],["听",t("Dictation"),t("Hear it, write on paper")],["写",t("Write on screen"),t("Draw each stroke")],["选",t("Meaning quiz"),t("Pick, then confirm")],["排",t("Arrange sentence"),t("Put words in order")],["赛",t("Live rooms"),t("Host a room code and compete with classmates on speed and accuracy.")],["印",t("Print a test sheet with answer key"),""]];
 function login(){
   onLogin=true;const up=authTab=="up";
@@ -228,21 +283,21 @@ function home(){
   const ls=[...new Set([...deck,...sents].map(w=>w.l))],has=deck.length||sents.length,md=user&&user.user_metadata||{};
   const who=user?`<div class="who"><button class="pfb" id="pf">${md.avatar_url?`<img src="${esc(md.avatar_url)}" alt="" referrerpolicy="no-referrer">`:`<span class="av"></span>`}<span class="nm">${esc(displayName())}</span></button><button class="ghost sm" id="so">${t("Sign out")}</button></div>`:`<div class="who"><span class="nm hint">${guest?t("Guest"):""}</span><button class="ghost sm" id="si">${t("Sign in")}</button></div>`;
   app.innerHTML=`<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div><div class="who">${langSel()}${who}</div></header>
-  <div class="grid"><div class="col">
-  <section class="card"><h2>${t("Your word list")}</h2><p class="hint" style="margin:0">${t("Paste your class vocabulary or open a TXT file.")}</p>
+  <div class="grid${has?"":" nodeck"}"><div class="col">
+  <section class="card c-words"><h2>${t("Your word list")}</h2><p class="hint" style="margin:0">${t("Paste your class vocabulary or open a TXT file.")}</p>
   <textarea id="txt" rows="6" placeholder="# Lesson 1&#10;你好 | nǐ hǎo | hello"></textarea>
   <div class="row"><input type="file" id="file" accept=".txt,text/plain"><button id="load">${t("Load words")}</button><button class="ghost" id="sample">${t("Try a sample")}</button></div>
   <div id="msg" aria-live="polite"></div>
   <details><summary>${t("File format")}</summary><pre># Lesson title (optional)\nhanzi | pinyin | meaning\n你好 | nǐ hǎo | hello\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese</pre><p class="hint">One word per line. Separate with | or a tab. Write the meaning in any language you like. Lines starting with [S] are sentences for the arrange game: put spaces between the words.</p></details></section>
-  ${has?`<section class="card"><h2>${t("Lessons")}</h2><p class="hint" style="margin:0 0 6px">${t("{0} words, {1} sentences",deck.length,sents.length)}</p>${ls.map((l,i)=>`<label class="ls"><input type="checkbox" data-l="${i}" ${sel.has(l)?"checked":""}><span>${esc(l)}</span><span class="hint" style="margin-left:auto">${t("{0} words, {1} sentences",deck.filter(w=>w.l==l).length,sents.filter(w=>w.l==l).length)}</span></label>`).join("")}
+  ${has?`<section class="card c-less"><h2>${t("Lessons")}</h2><p class="hint" style="margin:0 0 6px">${t("{0} words, {1} sentences",deck.length,sents.length)}</p>${ls.map((l,i)=>`<label class="ls"><input type="checkbox" data-l="${i}" ${sel.has(l)?"checked":""}><span>${esc(l)}</span><span class="hint" style="margin-left:auto">${t("{0} words, {1} sentences",deck.filter(w=>w.l==l).length,sents.filter(w=>w.l==l).length)}</span></label>`).join("")}
   <div class="row"><label>${t("Words per round")} <input type="number" id="cnt" min="1" max="200" value="10" style="width:76px"></label><button class="ghost" id="clr">${t("Remove list")}</button></div></section>`:""}
   </div><div class="col">${window.xToday?xToday():""}
-  ${has?`<section class="card"><h2>${t("Practise")}</h2><div class="tiles">
+  ${has?`<section class="card c-prac"><h2>${t("Practise")}</h2><div class="tiles">
   <button class="tile" data-m="dict"><i>听</i><b>${t("Dictation")}</b><span>${t("Hear it, write on paper")}</span></button>
   <button class="tile" data-m="write"><i>写</i><b>${t("Write on screen")}</b><span>${t("Draw each stroke")}</span></button>
   <button class="tile" data-m="quiz"><i>选</i><b>${t("Meaning quiz")}</b><span>${t("Pick, then confirm")}</span></button>
   <button class="tile" data-m="arr"><i>排</i><b>${t("Arrange sentence")}</b><span>${t("Put words in order")}</span></button></div>
-  <div class="row"><button class="ghost" id="pr">${t("Print a test sheet with answer key")}</button></div></section>`:`<section class="card"><h2>${t("Start with a word list")}</h2><p class="hint">${t("Paste your vocabulary on the left, or try the sample to look around.")}</p></section>`}
+  <div class="row"><button class="ghost" id="pr">${t("Print a test sheet with answer key")}</button></div></section>`:`<section class="card c-prac"><h2>${t("Start with a word list")}</h2><p class="hint">${t("Paste your vocabulary on the left, or try the sample to look around.")}</p></section>`}
   ${window.mpCard?mpCard():""}</div></div>`;
   const load=txt=>{const{out,bad,sent}=parse(txt);const m=$("#msg");
     if(!out.length&&!sent.length){m.innerHTML=`<span class="e">${t("No valid words found. Check the file format.")}</span>`;return}
@@ -283,7 +338,7 @@ function dict(w){
 }
 
 function write(w){
-  const chars=[...w.h].filter(c=>CJK.test(c)),sz=chars.length>2?160:220;
+  const chars=[...w.h].filter(c=>CJK.test(c)),cols=Math.min(chars.length||1,chars.length>4?3:2),sz=Math.max(90,Math.min(220,Math.floor((Math.min(innerWidth,640)-72-10*(cols-1))/cols)));
   frame(`<p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><div class="boxes" id="bx"></div><p id="st" class="hint">${t("Write each stroke. Up to {0} wrong strokes still count as correct; giving up counts as wrong.",MAX_MISS)}</p><div class="row" id="ctl"><button class="ghost" id="ls">${t("Listen")}</button><button class="ghost" id="hn">${t("Hint")}</button><button class="ghost" id="sa">${t("Show answer")}</button></div>`);
   $("#ls").onclick=()=>say(w.h);
   let miss=0,fbk=false,W=[];
