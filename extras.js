@@ -97,4 +97,6 @@ async function lb(){
   }catch(e){}
 }
 window.xScore=async p=>{if(!user||!SB||!p)return;try{await SB.from("scores").insert({name:displayName()||"?",points:p})}catch(e){}};
+window.xStats=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{streak:daily.last===td||daily.last===day(-1)?daily.streak:0,goal:daily.goal,today:daily.date===td?daily.n:0,learned:v.filter(p=>p.b>=3).length,mastered:v.filter(p=>p.b>=5).length,acc:r+x?Math.round(r/(r+x)*100):0,total:r+x,due:due().length}};
+window.xWeek=async()=>{if(!user||!SB)return 0;const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));try{const{data}=await SB.from("scores").select("points").eq("user_id",user.id).gte("created_at",d.toISOString());return(data||[]).reduce((a,r)=>a+r.points,0)}catch(e){return 0}};
 })();
