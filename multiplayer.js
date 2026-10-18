@@ -10,7 +10,7 @@ const players=()=>Object.entries(G.ch.presenceState()).map(([id,v])=>({id,name:v
 const bd=b=>`<ol class="miss">${b.map((x,i)=>`<li>${i+1}. ${esc(x.name)} <span class="hint">${x.score}</span></li>`).join("")}</ol>`;
 const speed=(ms,lim)=>Math.max(0,1-ms/(lim*1000));
 
-window.mpCard=()=>`<section class="card"><h2>${t("Play with classmates")}</h2>
+window.mpCard=()=>`<section class="card c-mp"><h2>${t("Play with classmates")}</h2>
 <div class="row">${deck.length||sents.length?`<button id="mh">${t("Host a game")}</button>`:`<span class="hint">${t("Load a word list to host a game.")}</span>`}</div>
 <div class="row"><input id="mc" inputmode="numeric" maxlength="6" placeholder="${t("Room code")}" value="${esc((new URLSearchParams(location.search).get("room")||"").replace(/\D/g,"").slice(0,6))}" style="width:120px"><input id="mn" maxlength="14" placeholder="${t("Nickname")}" value="${esc(displayName())}" style="width:150px"><button class="ghost" id="mj">${t("Join")}</button></div>
 <div id="me" class="hint" aria-live="polite"></div></section>`;
@@ -179,7 +179,7 @@ function gq(m){
   Promise.all(chars.map(c=>HanziWriter.loadCharacterData(c))).then(ds=>{
     if(!G||G.sent||G.q!==m)return;
     P.total=ds.reduce((a,d)=>a+d.strokes.length,0);const max=2*P.total,W=[];
-    const ink=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim(),sz=chars.length>2?160:220;
+    const ink=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim(),cols=Math.min(chars.length||1,chars.length>4?3:2),sz=Math.max(90,Math.min(220,Math.floor((Math.min(innerWidth,640)-72-10*(cols-1))/cols)));
     const info=()=>{const e=$("#st2");if(e)e.textContent=t("Strokes done: {0} of {1}. Wrong strokes: {2} of {3} allowed",P.done,P.total,P.miss,max)};info();
     chars.forEach(c=>{const d=document.createElement("div");d.className="tzg";$("#bx").append(d);
       W.push(HanziWriter.create(d,c,{width:sz,height:sz,padding:12,showCharacter:false,showOutline:false,strokeColor:ink,drawingColor:ink,highlightColor:"#c0222f",leniency:1.3}))});
