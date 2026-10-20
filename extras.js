@@ -107,11 +107,11 @@ async function imp(){
   sents=A(sents,(d.sents||[]).filter(w=>Array.isArray(w.t)&&w.t.every(x=>typeof x=="string")));
   save();home();
 }
-const rowOf=(k,ts)=>({word_key:String(k).slice(0,60),name:(displayName()||"?").slice(0,30),learned_at:new Date(ts).toISOString()});
+const rowOf=(k,ts)=>({user_id:user.id,word_key:String(k).slice(0,60),name:(displayName()||"?").slice(0,30),learned_at:new Date(ts).toISOString()});
 const logOpt={onConflict:"user_id,word_key",ignoreDuplicates:true};
 async function logWord(k,ts){
   if(typeof user=="undefined"||!user||!SB)return;
-  try{await SB.from("learn_log").upsert(rowOf(k,ts),logOpt)}catch(x){}
+  try{const{error}=await SB.from("learn_log").upsert(rowOf(k,ts),logOpt);if(error)console.warn("learn_log:",error.message)}catch(x){console.warn("learn_log:",x)}
 }
 async function backfill(){
   if(typeof user=="undefined"||!user||!SB)return;
@@ -120,7 +120,7 @@ async function backfill(){
   const rows=Object.entries(prog).filter(([k,p])=>p.f>0).map(([k,p])=>rowOf(k,p.f));
   if(!rows.length)return;
   try{
-    for(let i=0;i<rows.length;i+=200){const{error}=await SB.from("learn_log").upsert(rows.slice(i,i+200),logOpt);if(error)return}
+    for(let i=0;i<rows.length;i+=200){const{error}=await SB.from("learn_log").upsert(rows.slice(i,i+200),logOpt);if(error){console.warn("learn_log backfill:",error.message);return}}
     localStorage.setItem(flag,"1");
   }catch(x){}
 }
