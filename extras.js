@@ -43,7 +43,7 @@ window.xPull=async()=>{
 window.xRec=(w,ok)=>{
   xSnd(ok);
   const k=w.h,p=prog[k]||{b:0,d:0,r:0,x:0},now=Date.now();
-  if(ok){if(!p.r)p.f=now;p.b=Math.min(5,p.b+1);p.d=now+[0,1,2,4,8,16][p.b]*864e5;p.r++}else{p.b=0;p.d=now;p.x++}
+  if(ok){if(!p.r){p.f=now;logWord(k,now)}p.b=Math.min(5,p.b+1);p.d=now+[0,1,2,4,8,16][p.b]*864e5;p.r++}else{p.b=0;p.d=now;p.x++}
   prog[k]=p;
   const td=day();if(daily.date!==td){daily.date=td;daily.n=0}
   if(daily.last!==td){daily.streak=(daily.last===day(-1)?daily.streak:0)+1;daily.last=td;setTimeout(()=>fire(daily.streak),700)}
@@ -78,10 +78,11 @@ window.xToday=()=>{
   <label class="hint"><input type="checkbox" id="xm" ${mute?"":"checked"}> ${t("Sound")}</label></div></section>
   <section class="card c-share"><h2>${t("Share")}</h2><div class="row"><button class="ghost" id="xs" ${deck.length||sents.length?"":"disabled"}>${t("Share selected lessons")}</button>
   <input id="xi" maxlength="6" placeholder="${t("Share code")}" style="width:150px;text-transform:uppercase"><button class="ghost" id="xo">${t("Import")}</button></div><div id="xsm" class="hint" role="status"></div></section>
-  <section class="card c-board"><h2>${t("Weekly leaderboard")}</h2><div id="lb"></div><div id="lbm" class="hint"></div></section>`;
+  <section class="card c-board"><h2>${t("Weekly leaderboard")}</h2><p class="hint" style="margin:0">${t("New words learned this week")}</p><div id="lb"></div><div id="lbm" class="hint"></div></section>`;
 };
 window.xBind=()=>{
   const g=$("#xg");if(!g)return;
+  backfill();
   g.onchange=()=>{daily.goal=Math.max(1,+g.value||10);xChanged();home()};
   $("#xm").onchange=e=>{mute=!e.target.checked;sv()};
   $("#xr").onclick=()=>{const c=$("#cnt"),q=xPick(due(),c?+c.value||10:10);if(q.length)run("write",q)};
@@ -106,17 +107,35 @@ async function imp(){
   sents=A(sents,(d.sents||[]).filter(w=>Array.isArray(w.t)&&w.t.every(x=>typeof x=="string")));
   save();home();
 }
+const rowOf=(k,ts)=>({word_key:String(k).slice(0,60),name:(displayName()||"?").slice(0,30),learned_at:new Date(ts).toISOString()});
+const logOpt={onConflict:"user_id,word_key",ignoreDuplicates:true};
+async function logWord(k,ts){
+  if(typeof user=="undefined"||!user||!SB)return;
+  try{await SB.from("learn_log").upsert(rowOf(k,ts),logOpt)}catch(x){}
+}
+async function backfill(){
+  if(typeof user=="undefined"||!user||!SB)return;
+  let flag="zw-bf-"+user.id;
+  try{if(localStorage.getItem(flag))return}catch(x){}
+  const rows=Object.entries(prog).filter(([k,p])=>p.f>0).map(([k,p])=>rowOf(k,p.f));
+  if(!rows.length)return;
+  try{
+    for(let i=0;i<rows.length;i+=200){const{error}=await SB.from("learn_log").upsert(rows.slice(i,i+200),logOpt);if(error)return}
+    localStorage.setItem(flag,"1");
+  }catch(x){}
+}
 async function lb(){
   const o=$("#lb"),m=$("#lbm");if(!o)return;
   if(!user){m.textContent=t("Sign in to join the leaderboard.");return}
+  await backfill();
   const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));
   try{
-    const{data}=await SB.from("scores").select("user_id,name,points").gte("created_at",d.toISOString()).limit(1000);
-    const a={};(data||[]).forEach(r=>{const x=a[r.user_id]||(a[r.user_id]={name:r.name,s:0});x.s+=r.points});
-    const top=Object.values(a).sort((x,y)=>y.s-x.s).slice(0,10);
-    o.innerHTML=top.length?xPodium(top.map(x=>({name:x.name,score:x.s}))):"";
-    if(!top.length)m.textContent=t("No scores yet this week.");
-  }catch(e){}
+    const{data,error}=await SB.rpc("weekly_words",{since:d.toISOString()});
+    if(error){m.textContent=error.message;return}
+    const top=(data||[]).slice(0,10).map(r=>({name:r.name,score:Number(r.words),me:r.user_id===user.id}));
+    o.innerHTML=top.length?xPodium(top):"";
+    if(!top.length)m.textContent=t("No words learned yet this week.");
+  }catch(x){}
 }
 const st3=document.createElement("style");
 st3.textContent=`.podwrap{position:relative;overflow:hidden;padding-top:4px}
