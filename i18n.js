@@ -28,3 +28,8 @@ Object.assign(I18N.vi,{"You were invited to a game":"Bạn được mời vào m
 Object.assign(I18N.id,{"You were invited to a game":"Kamu diundang ke sebuah game","Enter a username to play":"Tulis username untuk bermain","Skip to home":"Ke beranda","Next question in":"Soal berikutnya dalam","Game starts in":"Game dimulai dalam"});
 Object.assign(I18N.ru,{"You were invited to a game":"Вас пригласили в игру","Enter a username to play":"Введите имя, чтобы играть","Skip to home":"На главную","Next question in":"Следующий вопрос через","Game starts in":"Игра начнётся через"});
 Object.assign(I18N.zh,{"You were invited to a game":"你被邀请加入游戏","Enter a username to play":"输入用户名即可开始","Skip to home":"回到首页","Next question in":"下一题倒计时","Game starts in":"游戏即将开始"});
+
+Object.assign(I18N.vi,{"New words learned this week":"Từ mới học trong tuần này","No words learned yet this week.":"Tuần này chưa có từ mới."});
+Object.assign(I18N.id,{"New words learned this week":"Kata baru dipelajari minggu ini","No words learned yet this week.":"Belum ada kata baru minggu ini."});
+Object.assign(I18N.ru,{"New words learned this week":"Новых слов за неделю","No words learned yet this week.":"На этой неделе пока нет новых слов."});
+Object.assign(I18N.zh,{"New words learned this week":"本周新学词语","No words learned yet this week.":"本周还没有新学词语。"});
