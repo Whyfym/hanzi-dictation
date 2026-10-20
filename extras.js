@@ -7,6 +7,16 @@ const st=document.createElement("style");
 st.textContent=`.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 12px;text-align:center}.stats b{display:block;font:800 1.7rem var(--hz)}.stats span{font-size:12.5px;color:var(--mut)}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;box-shadow:var(--sh);animation:tin .3s;z-index:9}@keyframes tin{from{opacity:0;margin-bottom:-12px}}.qr{width:170px;margin:10px auto;background:#fff;padding:6px;border-radius:10px}.qr svg{width:100%;height:auto;display:block}.opt.right,.opt.wrong{animation:bump .3s}@keyframes bump{50%{transform:scale(1.03)}}`;
 document.head.append(st);
 
+const st2=document.createElement("style");
+st2.textContent=`.s4{grid-template-columns:repeat(4,1fr)}.s4 b{font-size:1.4rem}.s4>div:nth-child(2) b{color:#059669}.s4>div:nth-child(3) b{color:var(--red)}.s4>div:nth-child(4) b{color:#0284c7}
+.flame{display:inline-block;animation:flick .9s infinite alternate}.flame.sm{font-size:1.1rem;vertical-align:middle}
+.fire{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.5);z-index:20;animation:fin .25s}
+.fire-in{position:relative;background:var(--card);color:var(--ink);padding:28px 40px;border-radius:26px;text-align:center;box-shadow:var(--sh);animation:pop3 .5s cubic-bezier(.2,1.4,.4,1)}
+.fire-in .flame{font-size:5.5rem;line-height:1;filter:drop-shadow(0 0 18px #ff9f1a)}.fire-n{font:800 1.6rem var(--hz);margin-top:6px}.fire-s{color:var(--mut)}
+.sp{position:absolute;left:50%;top:40%;width:8px;height:8px;border-radius:50%;background:#ffb020;opacity:0;animation:rise 1.4s ease-out forwards;animation-delay:var(--d)}
+@keyframes flick{from{transform:scale(.94) rotate(-4deg)}to{transform:scale(1.08) rotate(4deg)}}@keyframes pop3{from{transform:scale(.6);opacity:0}}
+@keyframes rise{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(var(--x),-170px)}}@keyframes fin{from{opacity:0}}`;
+document.head.append(st2);
 let ac;
 const beep=(f,d,o=0)=>{try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const s=ac.createOscillator(),g=ac.createGain(),n=ac.currentTime+o;s.frequency.value=f;g.gain.setValueAtTime(.12,n);g.gain.exponentialRampToValueAtTime(.0001,n+d);s.connect(g);g.connect(ac.destination);s.start(n);s.stop(n+d)}catch(e){}};
 window.xSnd=ok=>{if(mute)return;ok?(beep(660,.12),beep(880,.18,.1)):beep(170,.3)};
@@ -15,7 +25,7 @@ const toast=m=>{const e=document.createElement("div");e.className="toast";e.text
 const push=()=>{
   if(typeof user=="undefined"||!user||!SB)return;
   clearTimeout(pt);
-  pt=setTimeout(async()=>{try{await SB.from("user_data").upsert({user_id:user.id,data:{deck,sents,sel:[...sel],prog,daily},updated_at:new Date(ts).toISOString()})}catch(e){}},1500);
+  pt=setTimeout(async()=>{try{await SB.from("user_data").upsert({user_id:user.id,data:{deck,sents,sel:[...sel],prog,daily,arch},updated_at:new Date(ts).toISOString()})}catch(e){}},1500);
 };
 window.xChanged=()=>{ts=Date.now();sv();push()};
 window.xPull=async()=>{
@@ -23,8 +33,8 @@ window.xPull=async()=>{
   try{
     const{data}=await SB.from("user_data").select("data,updated_at").eq("user_id",user.id).maybeSingle();
     if(data&&Date.parse(data.updated_at)>ts+1000){
-      const d=data.data||{};deck=d.deck||[];sents=d.sents||[];sel=new Set(d.sel||[]);prog=d.prog||{};daily=d.daily||daily;ts=Date.parse(data.updated_at);sv();
-      try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,sel:[...sel]}))}catch(e){}
+      const d=data.data||{};deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};sel=new Set(d.sel||[]);prog=d.prog||{};daily=d.daily||daily;ts=Date.parse(data.updated_at);sv();
+      try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(e){}
       if(app.querySelector(".grid"))home();
     }else if((deck.length||sents.length)&&(!data||ts>Date.parse(data.updated_at)+1000)){if(!ts)ts=Date.now();push()}
   }catch(e){}
@@ -33,10 +43,10 @@ window.xPull=async()=>{
 window.xRec=(w,ok)=>{
   xSnd(ok);
   const k=w.h,p=prog[k]||{b:0,d:0,r:0,x:0},now=Date.now();
-  if(ok){p.b=Math.min(5,p.b+1);p.d=now+[0,1,2,4,8,16][p.b]*864e5;p.r++}else{p.b=0;p.d=now;p.x++}
+  if(ok){if(!p.r)p.f=now;p.b=Math.min(5,p.b+1);p.d=now+[0,1,2,4,8,16][p.b]*864e5;p.r++}else{p.b=0;p.d=now;p.x++}
   prog[k]=p;
   const td=day();if(daily.date!==td){daily.date=td;daily.n=0}
-  if(daily.last!==td){daily.streak=(daily.last===day(-1)?daily.streak:0)+1;daily.last=td}
+  if(daily.last!==td){daily.streak=(daily.last===day(-1)?daily.streak:0)+1;daily.last=td;setTimeout(()=>fire(daily.streak),700)}
   daily.n++;if(daily.n===daily.goal){toast(t("Daily goal reached!"));setTimeout(()=>xSnd(true),400)}
   xChanged();
 };
@@ -45,11 +55,23 @@ window.xPick=(pool,n)=>{
   return shuf(pool.map(w=>({w,k:Math.random()*wt(w)})).sort((a,b)=>b.k-a.k).slice(0,n).map(x=>x.w));
 };
 const due=()=>{const now=Date.now();return deck.filter(w=>sel.has(w.l)&&prog[w.h]&&prog[w.h].d<=now)};
+const newCounts=()=>{
+  const d=new Date();d.setHours(0,0,0,0);const a0=d.getTime(),w=new Date(d);w.setDate(w.getDate()-((w.getDay()+6)%7));
+  const w0=w.getTime(),m0=new Date(d.getFullYear(),d.getMonth(),1).getTime();let all=0,dy=0,wk=0,mo=0;
+  Object.values(prog).forEach(p=>{if(p.r>0)all++;if(p.f){if(p.f>=a0)dy++;if(p.f>=w0)wk++;if(p.f>=m0)mo++}});
+  return{today:dy,week:wk,month:mo,all};
+};
+function fire(n){
+  const o=document.createElement("div");o.className="fire";
+  const sp=Array.from({length:16},()=>`<i class="sp" style="--x:${Math.round(Math.random()*240-120)}px;--d:${(Math.random()*.6).toFixed(2)}s"></i>`).join("");
+  o.innerHTML=`<div class="fire-in">${sp}<div class="flame">🔥</div><div class="fire-n">${t("{0}-day streak!",n)}</div><div class="fire-s">${t("Keep it burning!")}</div></div>`;
+  o.onclick=()=>o.remove();document.body.append(o);setTimeout(()=>o.remove(),3200);
+}
 
 window.xToday=()=>{
   const td=day(),n=daily.date===td?daily.n:0,g=daily.goal,du=due().length,sk=daily.last===td||daily.last===day(-1)?daily.streak:0;
   return `<section class="card c-today"><h2>${t("Today")}</h2>
-  <div class="stats"><div><b>${sk}</b><span>${t("Day streak")}</span></div><div><b>${n}/${g}</b><span>${t("Daily goal")}</span></div><div><b>${du}</b><span>${t("Due for review")}</span></div></div>
+  <div class="stats s4"><div><b>${sk?`<span class="flame sm">🔥</span> `:""}${sk}</b><span>${t("Day streak")}</span></div><div><b>${newCounts().today}</b><span>${t("New words today")}</span></div><div><b>${n}/${g}</b><span>${t("Daily goal")}</span></div><div><b>${du}</b><span>${t("Due for review")}</span></div></div>
   <div class="prog"><i style="width:${Math.min(100,n/g*100)}%"></i></div>
   <div class="row"><button id="xr" ${du?"":"disabled"}>${t("Review due words")}</button>
   <label class="hint">${t("Goal")} <input type="number" id="xg" min="1" max="200" value="${g}" style="width:64px"></label>
@@ -97,6 +119,6 @@ async function lb(){
   }catch(e){}
 }
 window.xScore=async p=>{if(!user||!SB||!p)return;try{await SB.from("scores").insert({name:displayName()||"?",points:p})}catch(e){}};
-window.xStats=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{streak:daily.last===td||daily.last===day(-1)?daily.streak:0,goal:daily.goal,today:daily.date===td?daily.n:0,learned:v.filter(p=>p.b>=3).length,mastered:v.filter(p=>p.b>=5).length,acc:r+x?Math.round(r/(r+x)*100):0,total:r+x,due:due().length}};
+window.xStats=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{streak:daily.last===td||daily.last===day(-1)?daily.streak:0,goal:daily.goal,today:daily.date===td?daily.n:0,nw:newCounts(),mastered:v.filter(p=>p.b>=5).length,acc:r+x?Math.round(r/(r+x)*100):0,total:r+x,due:due().length}};
 window.xWeek=async()=>{if(!user||!SB)return 0;const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));try{const{data}=await SB.from("scores").select("points").eq("user_id",user.id).gte("created_at",d.toISOString());return(data||[]).reduce((a,r)=>a+r.points,0)}catch(e){return 0}};
 })();
