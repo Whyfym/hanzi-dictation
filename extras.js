@@ -78,7 +78,7 @@ window.xToday=()=>{
   <label class="hint"><input type="checkbox" id="xm" ${mute?"":"checked"}> ${t("Sound")}</label></div></section>
   <section class="card c-share"><h2>${t("Share")}</h2><div class="row"><button class="ghost" id="xs" ${deck.length||sents.length?"":"disabled"}>${t("Share selected lessons")}</button>
   <input id="xi" maxlength="6" placeholder="${t("Share code")}" style="width:150px;text-transform:uppercase"><button class="ghost" id="xo">${t("Import")}</button></div><div id="xsm" class="hint" role="status"></div></section>
-  <section class="card c-board"><h2>${t("Weekly leaderboard")}</h2><ol id="lb" class="miss"></ol><div id="lbm" class="hint"></div></section>`;
+  <section class="card c-board"><h2>${t("Weekly leaderboard")}</h2><div id="lb"></div><div id="lbm" class="hint"></div></section>`;
 };
 window.xBind=()=>{
   const g=$("#xg");if(!g)return;
@@ -114,10 +114,43 @@ async function lb(){
     const{data}=await SB.from("scores").select("user_id,name,points").gte("created_at",d.toISOString()).limit(1000);
     const a={};(data||[]).forEach(r=>{const x=a[r.user_id]||(a[r.user_id]={name:r.name,s:0});x.s+=r.points});
     const top=Object.values(a).sort((x,y)=>y.s-x.s).slice(0,10);
-    o.innerHTML=top.map((x,i)=>`<li>${i+1}. ${esc(x.name)} <span class="hint">${x.s}</span></li>`).join("");
+    o.innerHTML=top.length?xPodium(top.map(x=>({name:x.name,score:x.s}))):"";
     if(!top.length)m.textContent=t("No scores yet this week.");
   }catch(e){}
 }
+const st3=document.createElement("style");
+st3.textContent=`.podwrap{position:relative;overflow:hidden;padding-top:4px}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;min-height:250px;margin:10px 0 14px}
+.pcol{flex:1;max-width:118px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0}
+.r1{--dl:1s}.r2{--dl:.6s}.r3{--dl:.2s}
+.pname{font-weight:800;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;opacity:0;animation:fup .5s ease-out forwards;animation-delay:calc(var(--dl) + .55s)}
+.pscore{font:800 1.15rem var(--hz);margin:2px 0 6px;opacity:0;animation:fup .5s ease-out forwards;animation-delay:calc(var(--dl) + .6s)}
+.crown{display:block;font-size:1.7rem;line-height:1;animation:bob 1.2s ease-in-out infinite}
+.pbar{width:100%;height:var(--h);border-radius:14px 14px 4px 4px;display:flex;justify-content:center;padding-top:8px;font:800 1.7rem var(--hz);color:#3b2a00;transform-origin:bottom;animation:rise2 .8s cubic-bezier(.2,.9,.3,1.15) var(--dl) both}
+.r1 .pbar{background:linear-gradient(#fde68a,#f59e0b);box-shadow:0 0 28px -6px #f59e0b}.r2 .pbar{background:linear-gradient(#f3f4f6,#9ca3af)}.r3 .pbar{background:linear-gradient(#fdba74,#b45309);color:#fff}
+.me .pbar{outline:3px solid var(--red);outline-offset:2px}.me .pname{color:var(--red)}
+.bars{display:grid;gap:8px}.prow{display:grid;grid-template-columns:26px minmax(60px,1fr) minmax(60px,1.4fr) auto;gap:10px;align-items:center;opacity:0;animation:fup .4s ease-out forwards;animation-delay:calc(var(--base,.1s) + var(--i)*.12s)}
+.podwrap .prow{--base:1.6s}.prow .rk{font-weight:800;color:var(--mut);text-align:center}.prow .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.prow b{font-variant-numeric:tabular-nums}
+.pb2{height:12px;background:var(--soft);border-radius:6px;overflow:hidden}.pb2 i{display:block;height:100%;width:var(--w);border-radius:6px;background:linear-gradient(90deg,var(--red),var(--acc2));transform-origin:left;animation:grow .8s ease-out both;animation-delay:calc(var(--base,.1s) + var(--i)*.12s + .15s)}
+.prow.me .pn{color:var(--red)}
+.cf{position:absolute;top:-12px;left:var(--l);width:8px;height:12px;border-radius:2px;background:var(--c);opacity:0;animation:fall 2.8s linear var(--d) forwards;pointer-events:none}
+.cd{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:14px}.cd b{font:800 3.4rem/1.1 var(--hz);color:var(--red);min-height:1.1em}.cd b.big{font-size:6rem}.cd b.tick{animation:tick .6s}
+@keyframes rise2{from{height:0}to{height:var(--h)}}@keyframes fup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes grow{from{transform:scaleX(0)}}@keyframes bob{50%{transform:translateY(-5px) rotate(6deg)}}
+@keyframes fall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(340px) rotate(540deg)}}@keyframes tick{from{transform:scale(1.7);opacity:.2}}
+@media(prefers-reduced-motion:reduce){.pbar,.pb2 i,.cf,.crown,.pname,.pscore,.prow{animation:none!important;opacity:1}.cf{display:none}}`;
+document.head.append(st3);
+window.xBars=(items,start=1,top)=>{
+  top=top||Math.max(1,...items.map(x=>x.score));
+  return `<div class="bars">${items.map((x,i)=>`<div class="prow${x.me?" me":""}" style="--i:${i}"><span class="rk">${start+i}</span><span class="pn">${esc(x.name)}</span><div class="pb2"><i style="--w:${Math.max(4,x.score/top*100)}%"></i></div><b>${x.score}</b></div>`).join("")}</div>`;
+};
+window.xPodium=(items,conf)=>{
+  if(!items.length)return "";
+  const H=[150,115,85],order=[1,0,2].filter(i=>items[i]),top=Math.max(1,items[0].score);
+  const col=i=>{const x=items[i];return `<div class="pcol r${i+1}${x.me?" me":""}"><div class="pname">${i==0?`<span class="crown">👑</span>`:""}${esc(x.name)}</div><div class="pscore">${x.score}</div><div class="pbar" style="--h:${H[i]}px"><span>${i+1}</span></div></div>`};
+  const cf=conf?Array.from({length:28},(_,k)=>`<i class="cf" style="--l:${Math.round(Math.random()*100)}%;--d:${(Math.random()*1.8).toFixed(2)}s;--c:${["#f59e0b","#f43f5e","#0ea5e9","#10b981","#8b5cf6"][k%5]}"></i>`).join(""):"";
+  return `<div class="podwrap">${cf}<div class="podium">${order.map(col).join("")}</div>${items.length>3?xBars(items.slice(3),4,top):""}</div>`;
+};
 window.xScore=async p=>{if(!user||!SB||!p)return;try{await SB.from("scores").insert({name:displayName()||"?",points:p})}catch(e){}};
 window.xStats=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{streak:daily.last===td||daily.last===day(-1)?daily.streak:0,goal:daily.goal,today:daily.date===td?daily.n:0,nw:newCounts(),mastered:v.filter(p=>p.b>=5).length,acc:r+x?Math.round(r/(r+x)*100):0,total:r+x,due:due().length}};
 window.xWeek=async()=>{if(!user||!SB)return 0;const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));try{const{data}=await SB.from("scores").select("points").eq("user_id",user.id).gte("created_at",d.toISOString());return(data||[]).reduce((a,r)=>a+r.points,0)}catch(e){return 0}};
