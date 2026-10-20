@@ -197,7 +197,8 @@ function parse(t){
 }
 
 function setGuest(v){guest=v;try{v?localStorage.setItem("hz-guest","1"):localStorage.removeItem("hz-guest")}catch(e){}}
-function route(){(user||guest)?home():login()}
+let roomPending=/^\d{6}$/.test(new URLSearchParams(location.search).get("room")||"");
+function route(){roomPending?quickJoin():(user||guest)?home():login()}
 async function boot(){
   document.documentElement.lang=LANG;
   if(SB){
@@ -331,6 +332,21 @@ function lis(w){
     bs.forEach((b,i)=>{b.disabled=true;if(opts[i]===w)b.classList.add("right");else if(i==pick)b.classList.add("wrong")});
     $("#lq").insertAdjacentHTML("beforeend",`<p class="hint"><span class="hz-s">${esc(w.h)}</span> ${esc(w.p)} · ${esc(w.m)}</p>`);
     const c=$("#cf");c.textContent=t("Next");c.onclick=()=>rec(ok)};
+}
+function quickJoin(){
+  const code=new URLSearchParams(location.search).get("room"),saved=(()=>{try{return localStorage.getItem("zw-gname")||""}catch(e){return ""}})();
+  app.innerHTML=`<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div>${langSel()}</header>
+  <section class="card q"><h2>${t("You were invited to a game")}</h2><p class="hint">${t("Room code")}</p><div class="code">${esc(code)}</div>
+  <form id="qj" novalidate><label style="display:grid;gap:4px;margin-top:10px;font-weight:700;font-size:14px;text-align:left">${t("Enter a username to play")}<input id="qn" maxlength="14" autocomplete="nickname" value="${esc(displayName()||saved)}"></label>
+  <div id="qe" role="alert" style="color:var(--bad);font-size:13.5px;min-height:1.3em;margin-top:6px"></div>
+  <div class="row"><button type="submit">${t("Join")}</button></div></form><button class="link" id="qh">${t("Skip to home")}</button></section>`;
+  bindLang();
+  $("#qh").onclick=()=>{roomPending=false;history.replaceState(null,"",location.pathname);route()};
+  $("#qj").onsubmit=ev=>{ev.preventDefault();const v=$("#qn").value.trim();
+    if(!NAMEOK.test(v)){$("#qe").textContent=t("Use 2 to 14 letters, numbers, spaces, or _ . -");return}
+    if(!user&&!guest)setGuest(true);
+    try{localStorage.setItem("zw-gname",v)}catch(x){}
+    roomPending=false;history.replaceState(null,"",location.pathname);window.mpJoin(code,v)};
 }
 function home(){
   onLogin=false;
