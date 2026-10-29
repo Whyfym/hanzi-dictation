@@ -6,7 +6,7 @@ document.head.append(st);
 let G=null;
 const rid=()=>{try{let i=sessionStorage.getItem("hz-id");if(!i){i=Math.random().toString(36).slice(2,10);sessionStorage.setItem("hz-id",i)}return i}catch(e){return Math.random().toString(36).slice(2,10)}};
 const send=p=>G.ch.send({type:"broadcast",event:"m",payload:p});
-const players=()=>Object.entries(G.ch.presenceState()).map(([id,v])=>({id,name:v[0].name,host:!!v[0].host}));
+const players=()=>Object.entries(G.ch.presenceState()).map(([id,v])=>({id,name:v[0].name,host:!!v[0].host,av:v[0].av||""}));
 const bd=b=>`<ol class="miss">${b.map((x,i)=>`<li>${i+1}. ${esc(x.name)} <span class="hint">${x.score}</span></li>`).join("")}</ol>`;
 const speed=(ms,lim)=>Math.max(0,1-ms/(lim*1000));
 
@@ -22,23 +22,25 @@ window.mpBind=()=>{
 };
 
 window.mpJoin=(c,n)=>connect(c,n,false);
+const HS={names:null};
 function hostSetup(){
-  const ws=deck.filter(w=>sel.has(w.l)),ss=sents.filter(w=>sel.has(w.l));
-  const row=(id,label,sec,ok,why)=>`<label class="ls"><input type="checkbox" id="t${id}" ${ok?"checked":"disabled"}> ${label}, ${t("seconds")} <input type="number" id="l${id}" value="${sec}" min="5" max="300" style="width:70px"> ${ok?"":`<span class="hint">${why}</span>`}</label>`;
+  const chosen=new Set(HS.names||[...sel]);
+  const row=(id,label,sec)=>`<label class="ls"><input type="checkbox" id="t${id}" checked> ${label}, ${t("seconds")} <input type="number" id="l${id}" value="${sec}" min="5" max="300" style="width:70px"></label>`;
   app.innerHTML=`<section class="card"><h2>${t("Game settings")}</h2>
-  <label class="ls">${t("Questions")} <input type="number" id="gn" value="10" min="1" max="50" style="width:70px"></label>
+  <label class="ls">${t("Questions")} <input type="number" id="gn" value="10" min="1" max="100" style="width:70px"></label>
+  <h3>${t("Choose decks")}</h3>${deckTools()}<div class="dlist">${deckList("all",chosen,"data-hd")}</div>
   <p class="hint">Tick one type for a single-type game, or several to mix them.</p>
-  ${row("q",t("Meaning quiz"),15,deck.length>=4&&ws.length>0,"Needs at least 4 words in your list")}
-  ${row("l",t("Listen & guess"),20,deck.length>=4&&ws.length>0,"Needs at least 4 words in your list")}
-  ${row("w",t("Write on screen"),45,ws.length>0,"No words in the selected lessons")}
-  ${row("a",t("Arrange sentence"),30,ss.length>0,"Add [S] sentence lines to your file")}
-  <p class="hint">Selected lessons have ${ws.length} words and ${ss.length} sentences.</p>
+  ${row("q",t("Meaning quiz"),15)}${row("l",t("Listen & guess"),20)}${row("w",t("Write on screen"),45)}${row("a",t("Arrange sentence"),30)}
   <div class="row"><button id="go">${t("Create room")}</button><button class="ghost" id="bk">${t("Back")}</button></div></section>`;
-  $("#bk").onclick=home;
+  bindDeckTools();$("#bk").onclick=home;
   $("#go").onclick=()=>{
-    const on=id=>{const e=$("#t"+id);return !!e&&e.checked};
-    const s={n:+$("#gn").value||10,tq:on("q"),tw:on("w"),ta:on("a"),tl:on("l"),ll:+$("#ll").value||20,lq:+$("#lq").value||15,lw:+$("#lw").value||45,la:+$("#la").value||30,ws,ss};
-    if(!(s.tq||s.tw||s.ta||s.tl)){alert("Tick at least one question type.");return}
+    const ns=new Set([...app.querySelectorAll("[data-hd]:checked")].map(x=>x.dataset.hd));
+    if(!ns.size){alert(t("Select at least one deck."));return}
+    HS.names=[...ns];
+    const ws=dedupe(allWords().filter(w=>ns.has(w.l))),ss=dedupe(allSents().filter(w=>ns.has(w.l)));
+    const on=id=>{const e=$("#t"+id);return !!e&&e.checked},enough=allWords().length>=4&&ws.length>0;
+    const s={n:+$("#gn").value||10,tq:on("q")&&enough,tl:on("l")&&enough,tw:on("w")&&ws.length>0,ta:on("a")&&ss.length>0,ll:+$("#ll").value||20,lq:+$("#lq").value||15,lw:+$("#lw").value||45,la:+$("#la").value||30,ws,ss};
+    if(!(s.tq||s.tw||s.ta||s.tl)){alert("None of the ticked question types can be used with these decks (quiz needs 4 or more words in total, arrange needs sentences).");return}
     const name=(displayName()||prompt("Your nickname","Host")||"Host").slice(0,14);
     connect(String(100000+Math.floor(Math.random()*900000)),name,true,s);
   };
@@ -52,7 +54,7 @@ function connect(code,name,host,s){
   G.ch=G.sb.channel("hz-"+code,{config:{broadcast:{self:true},presence:{key:G.id}}});
   G.ch.on("broadcast",{event:"m"},({payload})=>onMsg(payload)).on("presence",{event:"sync"},sync).on("presence",{event:"join"},onJoin)
     .subscribe(status=>{
-      if(status==="SUBSCRIBED"){G.ch.track({name,host});lobby();
+      if(status==="SUBSCRIBED"){G.ch.track({name,host,av:window.myAvatar?myAvatar():""});lobby();
         if(!host)setTimeout(()=>{if(G&&!G.on&&!players().some(p=>p.host)){leave(true);home();alert("Room not found. Check the code and try again.")}},3000)}
       else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){if(G){leave(true);home();alert("Could not connect to the game server. Try again.")}}
     });
@@ -74,7 +76,7 @@ function lobby(){
   const ps=players();
   app.innerHTML=`<section class="card q"><p class="hint">${t("Room code")}</p><div class="code">${G.code}</div>${G.host?`<div id="qr" class="qr"></div>`:""}
   <p class="hint">${G.host?t("Share this code with your classmates, then start."):t("Waiting for the host to start.")}</p>
-  <div class="pl">${ps.map(p=>`<span class="chip">${esc(p.name)}</span>`).join("")}</div>
+  <div class="pl">${ps.map(p=>`<span class="chip">${avHTML(p.av,p.name,"sm")}${esc(p.name)}</span>`).join("")}</div>
   <div class="row">${G.host?`<button id="gs">${t("Start game")}</button>`:""}<button class="ghost" id="lv">${t("Leave")}</button></div></section>`;
   $("#lv").onclick=()=>leave();
   if(G.host){$("#gs").onclick=hostRun;if(window.qrcode&&$("#qr")){try{const q=qrcode(0,"M");q.addData(location.origin+location.pathname+"?room="+G.code);q.make();$("#qr").innerHTML=q.createSvgTag({cellSize:5,margin:2,scalable:true})}catch(e){}}}
@@ -92,13 +94,13 @@ async function hostRun(){
   for(let i=0;i<qs.length;i++){
     const{type,w}=qs[i],lim={quiz:s.lq,write:s.lw,arrange:s.la,listen:s.ll}[type];
     let opts,ci,toks,sub;
-    if(type=="quiz"){const o=shuf([w,...shuf(deck.filter(x=>x.m!==w.m)).slice(0,3)]);opts=o.map(x=>x.m);ci=o.indexOf(w)}
+    if(type=="quiz"){const o=shuf([w,...shuf(allWords().filter(x=>x.m!==w.m)).slice(0,3)]);opts=o.map(x=>x.m);ci=o.indexOf(w)}
     if(type=="listen"){
       sub=Math.random()<.5?"hanzi":"mean";
       const uq=(a,k,skip)=>{const z=new Set([skip]),o=[];a.forEach(x=>{if(!z.has(x[k])&&o.length<3){z.add(x[k]);o.push(x)}});return o};
       let o;
-      if(sub=="hanzi"){const n=[...w.h].length,ds=uq(shuf(deck.filter(x=>[...x.h].length==n)),"h",w.h);if(ds.length)o=shuf([w,...ds]);else sub="mean"}
-      if(sub=="mean")o=shuf([w,...uq(shuf(deck),"m",w.m)]);
+      if(sub=="hanzi"){const n=[...w.h].length,ds=uq(shuf(allWords().filter(x=>[...x.h].length==n)),"h",w.h);if(ds.length)o=shuf([w,...ds]);else sub="mean"}
+      if(sub=="mean")o=shuf([w,...uq(shuf(allWords()),"m",w.m)]);
       opts=o.map(x=>sub=="hanzi"?x.h:x.m);ci=o.indexOf(w);
     }
     if(type=="arrange")toks=shuf(w.t);
@@ -118,7 +120,7 @@ async function hostRun(){
       }
       G.score[p.id]=(G.score[p.id]||0)+pts;G.cur.ans[p.id]={ok,pts};
     });
-    const board=ps.map(p=>({id:p.id,name:p.name,score:G.score[p.id]||0,pts:G.cur.ans[p.id].pts,ok:G.cur.ans[p.id].ok})).sort((a,b)=>b.score-a.score);
+    const board=ps.map(p=>({id:p.id,av:p.av,name:p.name,score:G.score[p.id]||0,pts:G.cur.ans[p.id].pts,ok:G.cur.ans[p.id].ok})).sort((a,b)=>b.score-a.score);
     const last=i==qs.length-1;
     send({t:last?"end":"r",board,wait:6,right:type=="quiz"||type=="listen"?opts[ci]:type=="arrange"?w.t.join(" "):w.h});
     if(last)return;
@@ -223,13 +225,13 @@ function startCd(n){
 }
 function res(m){
   const me=m.board.find(b=>b.id==G.id)||{};
-  app.innerHTML=`<section class="card"><h2>${me.ok?t("Correct"):me.pts?t("Partly done"):t("Not this time")}${me.pts?" +"+me.pts:""}</h2><p class="hint">${t("Answer:")} <b>${esc(m.right)}</b></p>${window.xBars?xBars(m.board.slice(0,5).map(b=>({name:b.name,score:b.score,me:b.id==G.id}))):bd(m.board.slice(0,5))}<div class="cd"><span class="hint">${t("Next question in")}</span><b id="cdn">${m.wait||6}</b></div></section>`;
+  app.innerHTML=`<section class="card"><h2>${me.ok?t("Correct"):me.pts?t("Partly done"):t("Not this time")}${me.pts?" +"+me.pts:""}</h2><p class="hint">${t("Answer:")} <b>${esc(m.right)}</b></p>${window.xBars?xBars(m.board.slice(0,5).map(b=>({name:b.name,score:b.score,me:b.id==G.id,av:b.av}))):bd(m.board.slice(0,5))}<div class="cd"><span class="hint">${t("Next question in")}</span><b id="cdn">${m.wait||6}</b></div></section>`;
   startCd(m.wait||6);
 }
 function fin(m){
   {const me0=m.board.find(b=>b.id==G.id);if(me0&&window.xScore)xScore(me0.score)}
   const ms=G.miss.filter(w=>!w.s).map(w=>({...w,l:"Missed"})),all=G.miss;
-  app.innerHTML=`<section class="card"><h2>${t("Final scores")}</h2>${window.xPodium?xPodium(m.board.map(b=>({name:b.name,score:b.score,me:b.id==G.id})),true):bd(m.board)}
+  app.innerHTML=`<section class="card"><h2>${t("Final scores")}</h2>${window.xPodium?xPodium(m.board.map(b=>({name:b.name,score:b.score,me:b.id==G.id,av:b.av})),true):bd(m.board)}
   ${all.length?`<h3>${t("Your missed words")}</h3><ul class="miss">${all.map(w=>`<li><span class="hz-s">${esc(w.h)}</span><span>${esc(w.p)}</span><span class="hint">${esc(w.m)}</span></li>`).join("")}</ul>`:`<p>${t("You answered everything correctly.")}</p>`}
   <div class="row">${ms.length?`<button id="pm">${t("Practise missed words")}</button>`:""}<button class="ghost" id="hm2">${t("Back to start")}</button></div></section>`;
   if(ms.length)$("#pm").onclick=()=>{leave(true);run("write",shuf(ms))};
