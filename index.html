@@ -166,6 +166,23 @@ button.ghost,.tile,.opt,.tab,.link,.pfb{box-shadow:none}
 .chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:16px 0 8px}
 .chip2{background:var(--card);color:var(--ink);border:2px solid var(--line);box-shadow:none;padding:12px 20px;font-size:1rem;border-radius:14px}
 .chip2:first-child{border-color:var(--red)}.chip2:hover{border-color:var(--red);background:var(--soft)}
+/* avatars, decks, settings, nav */
+.hz{font-size:calc(clamp(2.8rem,12vw,4.4rem)*var(--hzs,1))}
+.face .hz{font-size:calc(clamp(2.4rem,11vw,4.4rem)*var(--hzs,1))}
+.dock{grid-template-columns:repeat(5,1fr)}
+.top .pfb{padding:0;background:none;border:0;box-shadow:none;border-radius:50%;min-height:0}
+.av2{display:inline-grid;place-items:center;border-radius:50%;object-fit:cover;color:#fff;font:800 1rem var(--ui);flex:none;width:38px;height:38px;vertical-align:middle;background:var(--soft)}
+.av2.sm{width:24px;height:24px;font-size:.75rem;margin-right:6px}.av2.big{width:46px;height:46px;font-size:1.2rem;margin-bottom:4px}.av2.xl{width:84px;height:84px;font-size:2.2rem}
+.pav{display:flex;flex-direction:column;align-items:center}
+.dlist{max-height:300px;overflow:auto;margin:8px 0;border:1px solid var(--soft);border-radius:12px;padding:0 10px}
+.drow{flex-wrap:wrap;align-items:center;gap:6px 10px}.drow .dn{flex:1;min-width:0}.drow .dm{margin-left:auto;font-size:12.5px}
+.mbar{flex-basis:100%;height:5px;background:var(--soft);border-radius:3px;overflow:hidden;margin-bottom:2px}.mbar i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--acc2))}
+.tag{font-style:normal;font-size:11px;font-weight:800;background:var(--soft);color:var(--mut);border-radius:6px;padding:1px 6px;margin-left:6px}
+.nudge{display:flex;align-items:center;gap:12px;border-color:color-mix(in srgb,#f59e0b 55%,var(--line))}.nudge .flame{font-size:1.8rem}.nudge button{margin-left:auto;flex:none}
+.setgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:8px 0}.setgrid label{display:grid;gap:4px;font-weight:700;font-size:13.5px}.setgrid select{width:100%}
+.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 50%,var(--line))}
+.v-me{max-width:640px;margin:0 auto;width:100%}
+.v-words>.c-share{grid-column:1/-1}
 @media print{body>*:not(#sheet){display:none!important}#sheet{display:block;color:#000;background:#fff;font:15px/1.4 var(--ui)}#sheet li{margin:0 0 16px}.wb{height:56px;border-bottom:1px solid #000;margin-top:4px}body{background:#fff;padding:0}}
 #sheet{display:none}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -286,34 +303,81 @@ function nameSetup(){
     const{data,error}=await SB.auth.updateUser({data:{username:v}});
     $("#ns").disabled=false;
     if(error){$("#ne").textContent=error.message;return}
-    user=data.user;home()};
+    user=data.user;if(window.xProfile)xProfile();home()};
+}
+function themeSelHTML(){return `<select id="th" aria-label="Theme">${THEMES.map(([c,n])=>`<option value="${c}" ${c==THEME?"selected":""}>${n}</option>`).join("")}</select>`}
+function langSelHTML(){return `<select id="lg" aria-label="Language">${LANGS.map(([c,n])=>`<option value="${c}" ${c==LANG?"selected":""}>${n}</option>`).join("")}</select>`}
+function settingsCard(){
+  return `<section class="card"><h2>${t("Settings")}</h2><div class="setgrid"><label>${t("Language")}${langSelHTML()}</label><label>${t("Theme")}${themeSelHTML()}</label>
+  <label>${t("Hanzi size")}<select id="sz">${[["s","Small"],["m","Medium"],["l","Large"]].map(([v,n])=>`<option value="${v}" ${SET.size==v?"selected":""}>${t(n)}</option>`).join("")}</select></label></div>
+  <label class="ls"><input type="checkbox" id="sq" ${SET.qpy?"checked":""}> ${t("Show pinyin in quiz")}</label>
+  <label class="ls"><input type="checkbox" id="sf" ${SET.fpy?"checked":""}> ${t("Show pinyin on flashcard front")}</label></section>`;
+}
+function bindSettings(){
+  bindLang();
+  const z=$("#sz");if(z)z.onchange=ev=>{SET.size=ev.target.value;saveSet()};
+  const q=$("#sq");if(q)q.onchange=ev=>{SET.qpy=ev.target.checked;saveSet()};
+  const f=$("#sf");if(f)f.onchange=ev=>{SET.fpy=ev.target.checked;saveSet()};
+}
+async function setPhoto(file){
+  const m=$("#pme");
+  try{
+    const bmp=await createImageBitmap(file),S=256,c=document.createElement("canvas");c.width=c.height=S;
+    const k=Math.min(bmp.width,bmp.height);c.getContext("2d").drawImage(bmp,(bmp.width-k)/2,(bmp.height-k)/2,k,k,0,0,S,S);
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.85));
+    const{error}=await SB.storage.from("avatars").upload(user.id+"/avatar.jpg",blob,{upsert:true,contentType:"image/jpeg"});
+    if(error)throw error;
+    const{data,error:e2}=await SB.auth.updateUser({data:{avatar_v:Date.now()}});if(e2)throw e2;
+    user=data.user;if(window.xProfile)xProfile();profile();
+  }catch(x){if(m)m.textContent=t("Photo could not be uploaded.")}
+}
+async function delPhoto(){
+  try{await SB.storage.from("avatars").remove([user.id+"/avatar.jpg"]);const{data}=await SB.auth.updateUser({data:{avatar_v:0}});user=data.user;if(window.xProfile)xProfile();profile()}catch(x){}
+}
+function exportData(){
+  const d={app:"Zhongwenfy",exportedAt:new Date().toISOString(),deck,sents,archive:arch,selected:[...sel],settings:SET,progress:window.xExport?xExport():{}};
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,1)],{type:"application/json"}));a.download="zhongwenfy-data.json";document.body.append(a);a.click();a.remove();
+}
+async function delAccount(){
+  if((prompt(t("Type DELETE to permanently delete your account and online data."))||"").trim()!="DELETE")return;
+  try{
+    await SB.storage.from("avatars").remove([user.id+"/avatar.jpg"]);
+    const{error}=await SB.rpc("delete_my_account");if(error)throw error;
+    try{await SB.auth.signOut()}catch(x){}
+    setGuest(false);location.reload();
+  }catch(x){alert(x.message||x)}
 }
 function profile(){
+  const dataCard=`<section class="card"><h2>${t("Your data")}</h2><div class="row" style="margin-top:6px"><button class="ghost" id="exp">${t("Export my data")}</button>${user?`<button class="ghost danger" id="dacc">${t("Delete my account")}</button>`:""}</div></section>`;
   if(!user){
-    app.innerHTML=`<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div>${langSel()}</header><section class="card q"><h2>${t("Sign in to see your profile")}</h2><div class="row"><button id="pgl">${t("Sign in")}</button></div></section>${dock()}`;
-    bindLang();bindDock();$("#pgl").onclick=()=>{setGuest(false);login()};return}
+    app.innerHTML=`${topbar()}<div class="view v-me"><section class="card"><div class="pfhead">${avHTML("",t("Guest"),"xl")}<div><h2 style="font-size:1.3rem">${t("Guest")}</h2><p class="hint" style="margin:4px 0 0">${t("Sign in to see your profile")}</p></div></div><div class="row"><button id="pgl">${t("Sign in")}</button></div></section>${settingsCard()}${dataCard}</div>${dock()}`;
+    bindSettings();bindDock();bindTop();$("#exp").onclick=exportData;$("#pgl").onclick=()=>{setGuest(false);login()};return;
+  }
   const md=user.user_metadata||{},s=window.xStats?xStats():{streak:0,goal:10,today:0,due:0,mastered:0,acc:0,total:0,nw:{today:0,week:0,month:0,all:0}},loc=LANG=="zh"?"zh-CN":LANG;
   const fd=x=>x?new Date(x).toLocaleDateString(loc,{year:"numeric",month:"long",day:"numeric"}):"-";
   const prov=(user.app_metadata&&user.app_metadata.provider)||"email";
-  const av=md.avatar_url?`<img class="pfimg" src="${esc(md.avatar_url)}" alt="" referrerpolicy="no-referrer">`:`<span class="pfimg av"></span>`;
   const c=(v,l)=>`<div><b>${v}</b><span>${t(l)}</span></div>`;
-  app.innerHTML=`<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div>${langSel()}</header>
-  <section class="card"><div class="pfhead">${av}<div><h2 style="font-size:1.4rem">${esc(uname())}</h2><div class="hint">${esc(user.email||"")}</div><div class="hint">${t("Sign-in method")}: ${prov=="google"?"Google":t("Email")}</div></div></div>
+  app.innerHTML=`${topbar()}<div class="view v-me"><section class="card"><div class="pfhead">${avHTML(myAv(),uname(),"xl")}<div><h2 style="font-size:1.4rem">${esc(uname())}</h2><div class="hint">${esc(user.email||"")}</div><div class="hint">${t("Sign-in method")}: ${prov=="google"?"Google":t("Email")}</div>
+  <div class="row" style="margin-top:8px"><button class="ghost sm" id="chg">${t("Change photo")}</button>${md.avatar_v?`<button class="ghost sm" id="rmv">${t("Remove photo")}</button>`:""}<input type="file" id="pfile" accept="image/*" hidden></div><div id="pme" class="hint"></div></div></div>
   <div class="stats" style="margin-top:16px">${c(s.streak,"Day streak")}${c(s.today+"/"+s.goal,"Daily goal")}${c(s.due,"Due for review")}</div>
   <h3>${t("New words learned")}</h3><div class="stats s4">${c(s.nw.today,"Today")}${c(s.nw.week,"This week")}${c(s.nw.month,"This month")}${c(s.nw.all,"All time")}</div>
   <div class="stats">${c(s.mastered,"Mastered")}${c(s.acc+"%","Accuracy")}${c(s.total,"Answers")}</div>
   <div class="stats"><div><b id="wk">-</b><span>${t("Points this week")}</span></div><div><b style="font-size:1rem">${esc(fd(user.created_at))}</b><span>${t("Joined")}</span></div></div>
   <p class="hint">${t("Last sign-in")}: ${esc(fd(user.last_sign_in_at))}</p>
-  <h3>${t("Edit username")}</h3><form id="uf" novalidate><div class="row" style="margin-top:0"><input id="un" maxlength="14" value="${esc(uname())}"><button type="submit">${t("Save")}</button></div><div id="ue" role="status" class="hint" style="min-height:1.3em;margin-top:6px"></div></form>
-  <div class="row"><button class="ghost" id="po">${t("Sign out")}</button></div></section>${dock()}`;
-  bindLang();bindDock();
+  <h3>${t("Edit username")}</h3><form id="uf" novalidate><div class="row" style="margin-top:0"><input id="un" maxlength="14" value="${esc(uname())}"><button type="submit">${t("Save")}</button></div><div id="ue" role="status" class="hint" style="min-height:1.3em;margin-top:6px"></div></form></section>
+  ${settingsCard()}${dataCard}<section class="card"><button class="ghost" id="po" style="width:100%">${t("Sign out")}</button></section></div>${dock()}`;
+  bindSettings();bindDock();bindTop();
+  $("#chg").onclick=()=>$("#pfile").click();
+  $("#pfile").onchange=ev=>{const f=ev.target.files[0];if(f)setPhoto(f)};
+  if($("#rmv"))$("#rmv").onclick=delPhoto;
+  $("#exp").onclick=exportData;$("#dacc").onclick=delAccount;
   $("#po").onclick=async()=>{setGuest(false);await SB.auth.signOut()};
-  $("#uf").onsubmit=async e=>{
-    e.preventDefault();const v=$("#un").value.trim(),m=$("#ue");
+  $("#uf").onsubmit=async ev=>{
+    ev.preventDefault();const v=$("#un").value.trim(),m=$("#ue");
     if(!NAMEOK.test(v)){m.textContent=t("Use 2 to 14 letters, numbers, spaces, or _ . -");return}
     const{data,error}=await SB.auth.updateUser({data:{username:v}});
     if(error){m.textContent=error.message;return}
-    user=data.user;document.querySelector(".pfhead h2").textContent=v;m.textContent=t("Saved.")};
+    user=data.user;if(window.xProfile)xProfile();profile()};
   if(window.xWeek)xWeek().then(n=>{const e=$("#wk");if(e)e.textContent=n});
 }
 function archiveOld(nd,ns){
@@ -335,10 +399,10 @@ function lis(w){
   let mode=R.sub,opts;
   const uniq=(a,key,skip)=>{const s=new Set([skip]),o=[];a.forEach(x=>{if(!s.has(x[key])&&o.length<3){s.add(x[key]);o.push(x)}});return o};
   if(mode=="hanzi"){
-    const n=[...w.h].length,ds=uniq(shuf(deck.filter(x=>[...x.h].length==n)),"h",w.h);
+    const n=[...w.h].length,ds=uniq(shuf(allWords().filter(x=>[...x.h].length==n)),"h",w.h);
     if(ds.length)opts=shuf([w,...ds]);else mode="mean";
   }
-  if(mode=="mean")opts=shuf([w,...uniq(shuf(deck),"m",w.m)]);
+  if(mode=="mean")opts=shuf([w,...uniq(shuf(allWords()),"m",w.m)]);
   let pick=-1;const hz=mode=="hanzi";
   frame(`<button class="listenbig" id="lsn"><span>🔊</span><b>${t("Tap to listen")}</b></button>
   <div id="lq" hidden><p class="mn">${t(hz?"Which hanzi did you hear?":"What does it mean?")}</p>
@@ -369,11 +433,86 @@ function quickJoin(){
     roomPending=false;history.replaceState(null,"",location.pathname);window.mpJoin(code,v)};
 }
 let TAB="home";
-const TABS=[["home","家","Home"],["learn","学","Learn"],["words","词","Words"],["play","玩","Play"],["rank","榜","Ranking"],["me","我","Profile"]];
+let SET={size:"m",qpy:true,fpy:false};try{Object.assign(SET,JSON.parse(localStorage.getItem("zw-set")||"{}"))}catch(x){}
+const applySet=()=>document.documentElement.style.setProperty("--hzs",{s:.8,m:1,l:1.25}[SET.size]||1);
+const saveSet=()=>{try{localStorage.setItem("zw-set",JSON.stringify(SET))}catch(x){}applySet();if(window.xChanged)xChanged()};
+applySet();
+const allWords=()=>[...deck,...arch.deck],allSents=()=>[...sents,...arch.sents];
+const dedupe=a=>{const k=new Set();return a.filter(w=>{const x=w.h+"|"+w.l;if(k.has(x))return false;k.add(x);return true})};
+const getJ=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(x){return null}};
+const setJ=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v))}catch(x){}};
+const avColor=n=>{let h=0;for(const c of String(n))h=(h*31+c.charCodeAt(0))%360;return `hsl(${h} 55% 42%)`};
+const avUrl=(uid,v)=>v?`${CONFIG.supabaseUrl}/storage/v1/object/public/avatars/${uid}/avatar.jpg?v=${v}`:"";
+const myAv=()=>user&&user.user_metadata&&user.user_metadata.avatar_v?avUrl(user.id,user.user_metadata.avatar_v):"";
+window.myAvatar=myAv;
+function avHTML(url,name,cls){
+  return url?`<img class="av2 ${cls||""}" src="${esc(url)}" alt="" referrerpolicy="no-referrer">`:`<span class="av2 ${cls||""}" style="background:${avColor(name||"?")}">${esc(((name||"?").trim()[0]||"?").toUpperCase())}</span>`;
+}
+const TABS=[["home","家","Home"],["learn","学","Learn"],["words","词","Words"],["play","玩","Play"],["me","我","Profile"]];
 function dock(){
   return `<nav class="dock" aria-label="Main">${TABS.map(([k,g,l])=>`<button class="dk${TAB==k?" on":""}" data-tab2="${k}"${TAB==k?' aria-current="page"':""}><i>${g}</i><span>${t(l)}</span></button>`).join("")}</nav><div class="dockpad"></div>`;
 }
 function bindDock(){app.querySelectorAll("[data-tab2]").forEach(b=>b.onclick=()=>{TAB=b.dataset.tab2;window.scrollTo(0,0);home()})}
+function topbar(){
+  const nm=uname()||(guest?t("Guest"):"");
+  return `<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div><button class="pfb" id="pf" aria-label="${t("Profile")}">${avHTML(myAv(),nm)}</button></header>`;
+}
+function bindTop(){const p=$("#pf");if(p)p.onclick=()=>{TAB="me";window.scrollTo(0,0);home()}}
+
+/* ---- sessions: resume and repeat ---- */
+const SKEY="zw-session",LKEY="zw-last";
+let CUR={ds:[]};
+function saveSes(){if(!R)return;setJ(SKEY,{kind:"std",mode:R.mode,sub:R.sub||null,q:R.q,q0:R.q0||R.q,i:R.i,res:R.res.map(r=>({w:r.w,ok:r.ok,ms:r.ms,miss:r.miss})),ds:R.ds||[],ts:Date.now()})}
+function resumeSes(){
+  const s=getJ(SKEY);if(!s)return;
+  if(s.kind=="flash")return flash(s.q0,s);
+  R={mode:s.mode,q:s.q,i:s.i,res:s.res,t:0,sub:s.sub,ds:s.ds,q0:s.q0};step();
+}
+function repeatLast(){
+  const L=getJ(LKEY);if(!L||!L.q||!L.q.length)return;
+  CUR={ds:L.ds||[]};const q=shuf(L.q);
+  if(L.mode=="flash")flash(q);else run(L.mode,q,L.sub);
+}
+const MODE_LABEL={dict:"Dictation",write:"Write on screen",quiz:"Meaning quiz",flash:"Flashcards",lis:"Listen & guess",arr:"Arrange sentence"};
+function contCard(){
+  const s=getJ(SKEY),L=getJ(LKEY);
+  if(s){
+    const total=s.kind=="flash"?(s.q0||[]).length:(s.q||[]).length,done=s.kind=="flash"?(s.seen||[]).length:s.i;
+    return `<section class="card c-cont"><h2>${t("Continue where you left off")}</h2><p class="hint" style="margin:0 0 4px">${esc((s.ds||[]).join(", "))}</p><p class="hint" style="margin:0"><b>${t(MODE_LABEL[s.mode]||"")}</b> · ${t("{0} of {1} done",done,total)}</p><div class="row"><button id="cres">${t("Continue")}</button><button class="ghost" id="cdis">${t("Discard")}</button></div></section>`;
+  }
+  if(L&&L.q&&L.q.length)return `<section class="card c-cont"><h2>${t("Repeat last session")}</h2><p class="hint" style="margin:0 0 4px">${esc((L.ds||[]).join(", "))}</p><p class="hint" style="margin:0"><b>${t(MODE_LABEL[L.mode]||"")}</b> · ${L.q.length}</p><div class="row"><button class="ghost" id="crep">${t("Repeat session")}</button></div></section>`;
+  return "";
+}
+
+/* ---- deck chooser ---- */
+function lessonRows(){
+  const map=new Map(),mast=w=>window.xMast&&xMast(w);
+  const add=(list,isW,arc)=>list.forEach(w=>{let r=map.get(w.l);if(!r){r={l:w.l,w:0,s:0,m:0,act:false,arc:false};map.set(w.l,r)}if(isW){r.w++;if(mast(w))r.m++}else r.s++;if(arc)r.arc=true;else r.act=true});
+  add(deck,true,false);add(arch.deck,true,true);add(sents,false,false);add(arch.sents,false,true);
+  return [...map.values()].map(r=>({...r,pct:r.w?Math.round(r.m/r.w*100):0}));
+}
+function deckList(kind,checked,attr){
+  return lessonRows().filter(r=>kind=="sents"?r.s>0:kind=="words"?r.w>0:true).map(r=>`<label class="ls drow" data-n="${esc(r.l.toLowerCase())}"><input type="checkbox" ${attr}="${esc(r.l)}" ${checked.has(r.l)?"checked":""}><span class="dn">${esc(r.l)}${r.arc&&!r.act?`<em class="tag">${t("Archive")}</em>`:""}</span><span class="hint dm">${t("{0} words, {1} sentences",r.w,r.s)}${r.w?" · "+t("{0}% memorized",r.pct):""}</span>${r.w?`<div class="mbar"><i style="width:${r.pct}%"></i></div>`:""}</label>`).join("");
+}
+function bindDeckTools(){
+  const rows=()=>[...app.querySelectorAll(".drow")];
+  $("#dq").oninput=ev=>{const v=ev.target.value.trim().toLowerCase();rows().forEach(r=>{r.style.display=r.dataset.n.includes(v)?"":"none"})};
+  $("#dall").onclick=()=>rows().forEach(r=>{if(r.style.display!="none")r.querySelector("input").checked=true});
+  $("#dnone").onclick=()=>rows().forEach(r=>{if(r.style.display!="none")r.querySelector("input").checked=false});
+}
+const deckTools=()=>`<div class="row" style="margin-top:6px"><input id="dq" placeholder="${t("Search decks")}" style="flex:1;min-width:140px"><button class="ghost sm" id="dall">${t("Select all")}</button><button class="ghost sm" id="dnone">${t("Clear")}</button></div>`;
+function pickDecks(m){
+  const kind=m=="arr"?"sents":"words",chosen=new Set(getJ("zw-lastds-"+m)||[...sel]);
+  app.innerHTML=`<section class="card"><h2>${t("Choose decks")}</h2>${deckTools()}<div class="dlist">${deckList(kind,chosen,"data-dk")}</div>
+  <div class="row"><button id="dgo">${t("Next")}</button><button class="ghost" id="dbk">${t("Back")}</button></div></section>`;
+  bindDeckTools();$("#dbk").onclick=home;
+  $("#dgo").onclick=()=>{
+    const ns=[...app.querySelectorAll("[data-dk]:checked")].map(x=>x.dataset.dk);
+    if(!ns.length){alert(t("Select at least one deck."));return}
+    const set=new Set(ns),pool=dedupe((kind=="sents"?allSents():allWords()).filter(w=>set.has(w.l)));
+    sel=new Set(ns);setJ("zw-lastds-"+m,ns);save();CUR={ds:ns};pickCount(m,pool);
+  };
+}
 function pickCount(m,pool){
   const n=pool.length,half=Math.max(1,Math.round(n/2)),opts=[[n,t("All")+" ("+n+")"]];
   if(half<n)opts.push([half,t("Half")+" ("+half+")"]);
@@ -385,34 +524,29 @@ function pickCount(m,pool){
   const go=k=>{k=Math.max(1,Math.min(n,Math.floor(+k)||n));const q=(window.xPick||((p,c)=>shuf(p).slice(0,c)))(pool,k);m=="flash"?flash(q):m=="lis"?lisSetup(q):run(m,q)};
   app.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>go(b.dataset.k));
   $("#cgo").onclick=()=>{const v=+$("#ck").value;if(v>=1)go(v)};
-  $("#cb2").onclick=home;
+  $("#cb2").onclick=()=>pickDecks(m);
 }
+
 function home(){
   onLogin=false;
   if(user&&!uname()){nameSetup();return}
   if(TAB=="me"){profile();return}
-  const ls=[...new Set([...deck,...sents].map(w=>w.l))],has=deck.length||sents.length,md=user&&user.user_metadata||{};
-  const selW=deck.filter(w=>sel.has(w.l)).length,selS=sents.filter(w=>sel.has(w.l)).length;
-  const who=user?`<div class="who"><button class="pfb" id="pf">${md.avatar_url?`<img src="${esc(md.avatar_url)}" alt="" referrerpolicy="no-referrer">`:`<span class="av"></span>`}<span class="nm">${esc(displayName())}</span></button><button class="ghost sm" id="so">${t("Sign out")}</button></div>`:`<div class="who"><span class="nm hint">${guest?t("Guest"):""}</span><button class="ghost sm" id="si">${t("Sign in")}</button></div>`;
+  const has=allWords().length||allSents().length,active=deck.length||sents.length;
   const empty=`<section class="card"><h2>${t("Start with a word list")}</h2><p class="hint">${t("Add your vocabulary in the Words tab, or try the sample to look around.")}</p><div class="row"><button id="sample">${t("Try a sample")}</button><button class="ghost" id="gowords">${t("Words")}</button></div></section>`;
-  const lessons=`<section class="card c-less"><h2>${t("Lessons")}</h2><p class="hint" style="margin:0 0 6px">${t("{0} words, {1} sentences",deck.length,sents.length)}</p>${ls.map((l,i)=>`<label class="ls"><input type="checkbox" data-l="${i}" ${sel.has(l)?"checked":""}><span>${esc(l)}</span><span class="hint" style="margin-left:auto">${t("{0} words, {1} sentences",deck.filter(w=>w.l==l).length,sents.filter(w=>w.l==l).length)}</span></label>`).join("")}
-  <div class="row"><button id="golearn">${t("Start learning")}</button></div></section>`;
-  const tiles=`<section class="card c-prac"><h2>${t("Practise")}</h2><p class="hint" style="margin:0">${t("Selected lessons")}: ${t("{0} words, {1} sentences",selW,selS)}</p><div class="tiles">
+  const tiles=`<section class="card c-prac"><h2>${t("Practise")}</h2><div class="tiles">
   <button class="tile" data-m="dict"><i>听</i><b>${t("Dictation")}</b><span>${t("Hear it, write on paper")}</span></button>
   <button class="tile" data-m="write"><i>写</i><b>${t("Write on screen")}</b><span>${t("Draw each stroke")}</span></button>
   <button class="tile" data-m="quiz"><i>选</i><b>${t("Meaning quiz")}</b><span>${t("Pick, then confirm")}</span></button>
   <button class="tile" data-m="flash"><i>忆</i><b>${t("Flashcards")}</b><span>${t("Swipe right if you know it, left if not")}</span></button>
   <button class="tile" data-m="lis"><i>猜</i><b>${t("Listen & guess")}</b><span>${t("Hear it, then pick the answer")}</span></button>
-  <button class="tile" data-m="arr"><i>排</i><b>${t("Arrange sentence")}</b><span>${t("Put words in order")}</span></button></div>
-  <div class="row"><button class="ghost sm" id="golessons">${t("Lessons")}</button></div></section>`;
-  const words=`<div class="col2"><section class="card c-words"><h2>${t("Your word list")}</h2><p class="hint" style="margin:0">${t("Paste your class vocabulary or open a TXT file.")}</p>
+  <button class="tile" data-m="arr"><i>排</i><b>${t("Arrange sentence")}</b><span>${t("Put words in order")}</span></button></div></section>`;
+  const words=`${window.xShare?xShare():""}<div class="col2"><section class="card c-words"><h2>${t("Your word list")}</h2><p class="hint" style="margin:0">${t("Paste your class vocabulary or open a TXT file.")}</p>
   <textarea id="txt" rows="7" placeholder="# Lesson 1&#10;你好 | nǐ hǎo | hello"></textarea>
-  <div class="row"><input type="file" id="file" accept=".txt,text/plain"><button id="load">${t("Load words")}</button><button class="ghost" id="sample">${t("Try a sample")}</button>${has?`<button class="ghost" id="clr">${t("Archive list")}</button>`:""}</div>
+  <div class="row"><input type="file" id="file" accept=".txt,text/plain"><button id="load">${t("Load words")}</button><button class="ghost" id="sample">${t("Try a sample")}</button>${active?`<button class="ghost" id="clr">${t("Archive list")}</button>`:""}</div>
   <div id="msg" aria-live="polite"></div>
-  <details><summary>${t("File format")}</summary><pre># Lesson title (optional)\nhanzi | pinyin | meaning\n你好 | nǐ hǎo | hello\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese</pre><p class="hint">One word per line. Separate with | or a tab. Write the meaning in any language you like. Lines starting with [S] are sentences for the arrange game: put spaces between the words.</p></details></section></div>
-  <div class="col2">${window.xShare?xShare():""}${archCard()}</div>`;
-  const body=TAB=="home"?`${window.xToday?xToday():""}${has?lessons:empty}`:TAB=="learn"?(has?tiles:empty):TAB=="words"?words:TAB=="play"?(window.mpCard?mpCard():""):(window.xBoard?xBoard():"");
-  app.innerHTML=`<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div><div class="who">${langSel()}${who}</div></header><div class="view v-${TAB}">${body}</div>${dock()}`;
+  <details><summary>${t("File format")}</summary><pre># Lesson title (optional)\nhanzi | pinyin | meaning\n你好 | nǐ hǎo | hello\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese</pre><p class="hint">One word per line. Separate with | or a tab. Write the meaning in any language you like. Lines starting with [S] are sentences for the arrange game: put spaces between the words.</p></details></section></div><div class="col2">${archCard()}</div>`;
+  const body=TAB=="home"?`${window.xStreak?xStreak():""}${window.xToday?xToday():""}${contCard()}${has?"":empty}${window.xBoard?xBoard():""}`:TAB=="learn"?(has?tiles:empty):TAB=="words"?words:(window.mpCard?mpCard():"");
+  app.innerHTML=`${topbar()}<div class="view v-${TAB}">${body}</div>${dock()}`;
   const load=txt=>{const{out,bad,sent}=parse(txt);const m=$("#msg");
     if(!out.length&&!sent.length){if(m)m.innerHTML=`<span class="e">${t("No valid words found. Check the file format.")}</span>`;return}
     const b4=arch.deck.length+arch.sents.length;archiveOld(out,sent);const mv=arch.deck.length+arch.sents.length>b4;
@@ -422,31 +556,28 @@ function home(){
   if($("#load")){$("#load").onclick=()=>load($("#txt").value);$("#file").onchange=ev=>{const f=ev.target.files[0];if(f)f.text().then(load)}}
   if($("#sample"))$("#sample").onclick=()=>load(SAMPLE);
   if($("#gowords"))$("#gowords").onclick=()=>{TAB="words";home()};
-  if($("#golearn"))$("#golearn").onclick=()=>{TAB="learn";window.scrollTo(0,0);home()};
-  if($("#golessons"))$("#golessons").onclick=()=>{TAB="home";home()};
   if(TAB=="play"&&window.mpBind)mpBind();
   if(window.xBind)xBind();
-  app.querySelectorAll("[data-l]").forEach(c=>c.onchange=()=>{const l=ls[+c.dataset.l];c.checked?sel.add(l):sel.delete(l);save()});
   if($("#clr"))$("#clr").onclick=()=>{archiveOld([],[]);deck=[];sents=[];sel=new Set();save();home()};
+  if($("#cres"))$("#cres").onclick=resumeSes;
+  if($("#cdis"))$("#cdis").onclick=()=>{setJ(SKEY,null);home()};
+  if($("#crep"))$("#crep").onclick=repeatLast;
   app.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{
-    const m=b.dataset.m,a=m=="arr",pool=(a?sents:deck).filter(w=>sel.has(w.l));
-    if(!pool.length){alert(a?t("Select at least one lesson that has sentences."):t("Select at least one lesson that has words."));return}
-    pickCount(m,pool)});
-  bindLang();bindDock();
+    const a=b.dataset.m=="arr";
+    if(!(a?allSents():allWords()).length){alert(a?t("Select at least one lesson that has sentences."):t("Select at least one lesson that has words."));return}
+    pickDecks(b.dataset.m)});
+  bindDock();bindTop();
   const als=[...new Set([...arch.deck,...arch.sents].map(w=>w.l))],kk=w=>w.h+"|"+w.l;
   app.querySelectorAll("[data-ar]").forEach(b=>b.onclick=()=>{const l=als[+b.dataset.ar];
     const mv=(from,to)=>{const ex=new Set(to.map(kk));from.filter(w=>w.l==l&&!ex.has(kk(w))).forEach(w=>to.push(w))};
     mv(arch.deck,deck);mv(arch.sents,sents);arch.deck=arch.deck.filter(w=>w.l!=l);arch.sents=arch.sents.filter(w=>w.l!=l);sel.add(l);save();home()});
   app.querySelectorAll("[data-ad]").forEach(b=>b.onclick=()=>{const l=als[+b.dataset.ad];if(!confirm(t("Delete this lesson from the archive?")))return;
     arch.deck=arch.deck.filter(w=>w.l!=l);arch.sents=arch.sents.filter(w=>w.l!=l);save();home()});
-  const pf=$("#pf");if(pf)pf.onclick=()=>{TAB="me";home()};
-  const so=$("#so");if(so)so.onclick=async()=>{setGuest(false);await SB.auth.signOut()};
-  const si=$("#si");if(si)si.onclick=()=>{setGuest(false);login()};
 }
 
-function run(mode,q,sub){R={mode,q,i:0,res:[],t:0,sub};step()}
+function run(mode,q,sub){R={mode,q,i:0,res:[],t:0,sub,ds:CUR.ds,q0:q.slice()};saveSes();step()}
 function step(){if(R.i>=R.q.length)return done();R.t=Date.now();({dict,write,quiz,arr,lis})[R.mode](R.q[R.i])}
-function rec(ok,miss){if(window.xRec)xRec(R.q[R.i],ok);R.res.push({w:R.q[R.i],ok,ms:Date.now()-R.t,miss});R.i++;step()}
+function rec(ok,miss){if(window.xRec)xRec(R.q[R.i],ok);R.res.push({w:R.q[R.i],ok,ms:Date.now()-R.t,miss});R.i++;saveSes();step()}
 function frame(inner){
   app.innerHTML=`<div class="bar"><button class="ghost" id="quit">${t("Quit")}</button><span>${R.i+1} / ${R.q.length}</span><div class="prog"><i style="width:${R.i/R.q.length*100}%"></i></div></div><section class="card q">${inner}</section>`;
   $("#quit").onclick=home;
@@ -482,8 +613,8 @@ function write(w){
 }
 
 function quiz(w){
-  const o=shuf([w,...shuf(deck.filter(x=>x.m!==w.m)).slice(0,3)]);let pick=-1;
-  frame(`<div class="hz">${esc(w.h)}</div><p class="py">${esc(w.p)}</p><div class="opts">${o.map((x,i)=>`<button class="opt" data-i="${i}">${esc(x.m)}</button>`).join("")}</div><div class="row"><button id="cf" disabled>${t("Confirm answer")}</button></div>`);
+  const o=shuf([w,...shuf(allWords().filter(x=>x.m!==w.m)).slice(0,3)]);let pick=-1;
+  frame(`<div class="hz">${esc(w.h)}</div>${SET.qpy?`<p class="py">${esc(w.p)}</p>`:""}<div class="opts">${o.map((x,i)=>`<button class="opt" data-i="${i}">${esc(x.m)}</button>`).join("")}</div><div class="row"><button id="cf" disabled>${t("Confirm answer")}</button></div>`);
   const bs=[...app.querySelectorAll(".opt")];
   bs.forEach(b=>b.onclick=()=>{if(b.disabled)return;pick=+b.dataset.i;bs.forEach(x=>x.classList.toggle("on",x==b));$("#cf").disabled=false});
   $("#cf").onclick=()=>{const ok=o[pick]===w;bs.forEach((b,i)=>{b.disabled=true;if(o[i]===w)b.classList.add("right");else if(i==pick)b.classList.add("wrong")});
@@ -506,14 +637,18 @@ function arr(w){
     $("#ctl").innerHTML=`<button id="nx">${t("Next")}</button>`;$("#nx").onclick=()=>rec(ok?1:0)};
 }
 
-function flash(q0){
-  let cards=q0,round=1,mem=0,unk=[],i=0,busy=false;const seen=new Set();
+function flash(q0,st){
+  let cards=q0,round=1,mem=0,unk=[],i=0,busy=false,seen=new Set();const dsn=(st&&st.ds)||CUR.ds||[];
+  if(st){cards=st.cards;round=st.round;mem=st.mem;unk=st.unk;i=st.i;seen=new Set(st.seen)}
+  const fsave=()=>setJ(SKEY,{kind:"flash",q0,cards,round,mem,unk,i,seen:[...seen],ds:dsn,ts:Date.now()});
+  const fdone=()=>{setJ(SKEY,null);setJ(LKEY,{mode:"flash",q:q0,ds:dsn})};
   function show(){
     if(i>=cards.length)return end();
+    fsave();
     const w=cards[i];busy=false;
     app.innerHTML=`<div class="bar"><button class="ghost" id="quit">${t("Quit")}</button><span>${t("Round {0}",round)} · ${i+1}/${cards.length}</span><div class="prog"><i style="width:${i/cards.length*100}%"></i></div></div>
     <div class="fcwrap"><div class="fc" id="fc"><div class="fci">
-    <div class="face front"><div class="hz">${esc(w.h)}</div><button class="ghost sm" id="fl">${t("Listen")}</button><p class="hint" style="margin-top:14px">${t("Tap card to flip")}</p></div>
+    <div class="face front"><div class="hz">${esc(w.h)}</div>${SET.fpy?`<p class="py">${esc(w.p)}</p>`:""}<button class="ghost sm" id="fl">${t("Listen")}</button><p class="hint" style="margin-top:14px">${t("Tap card to flip")}</p></div>
     <div class="face back"><p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><button class="ghost sm" id="fl2">${t("Listen")}</button></div></div>
     <div class="stamp l">${t("Not memorized yet")}</div><div class="stamp r">${t("Memorized")}</div></div>
     <div class="fcbtns"><button class="bad" id="fn">${t("Not memorized yet")}</button><button class="ok" id="fy">${t("Memorized")}</button></div></div>`;
@@ -536,13 +671,13 @@ function flash(q0){
     window._fk={flip,decide};
   }
   function end(){
-    window._fk=null;
-    if(!unk.length){
-      app.innerHTML=`<section class="card q"><h2>${t("All cards memorized!")}</h2><p class="score">${q0.length} / ${q0.length}</p><div class="row"><button class="ghost" id="hm">${t("Back to start")}</button></div></section>`;
-      $("#hm").onclick=home;if(window.xSnd)xSnd(true);return}
+    window._fk=null;fsave();
+    if(!unk.length){fdone();
+      app.innerHTML=`<section class="card q"><h2>${t("All cards memorized!")}</h2><p class="score">${q0.length} / ${q0.length}</p><div class="row"><button id="rpf">${t("Repeat session")}</button><button class="ghost" id="hm">${t("Back to start")}</button></div></section>`;
+      $("#hm").onclick=home;$("#rpf").onclick=repeatLast;if(window.xSnd)xSnd(true);return}
     app.innerHTML=`<section class="card q"><h2>${t("Round complete")}</h2><p class="py">${t("{0} memorized, {1} to review",mem,unk.length)}</p><div class="row"><button id="rv">${t("Review {0} cards",unk.length)}</button><button class="ghost" id="fin">${t("Finish")}</button></div></section>`;
     $("#rv").onclick=()=>{cards=shuf(unk);unk=[];mem=0;i=0;round++;show()};
-    $("#fin").onclick=home;
+    $("#fin").onclick=()=>{fdone();home()};
   }
   if(!window._fkOn){window._fkOn=1;document.addEventListener("keydown",e=>{const k=window._fk;if(!k||!$("#fc"))return;
     if(e.key=="ArrowRight")k.decide(true,1);else if(e.key=="ArrowLeft")k.decide(false,-1);else if(e.key==" "||e.key=="ArrowUp"||e.key=="ArrowDown"){e.preventDefault();k.flip()}})}
@@ -550,12 +685,14 @@ function flash(q0){
 }
 
 function done(){
+  setJ(SKEY,null);setJ(LKEY,{mode:R.mode,sub:R.sub||null,q:R.q0||R.q,ds:R.ds||[]});
   const ok=R.res.filter(r=>r.ok).length,miss=R.res.filter(r=>!r.ok).map(r=>r.w);
   const avg=(R.res.reduce((a,r)=>a+r.ms,0)/R.res.length/1000).toFixed(1);
   app.innerHTML=`<section class="card"><h2>${t("Result")}</h2><p class="score">${ok} / ${R.res.length}</p><p class="hint">${t("Average {0} seconds per word",avg)}</p>
   ${R.mode=="write"?`<p class="hint">Wrong strokes per word: ${R.res.map(r=>esc(r.w.h)+" "+(r.miss==null?"-":r.miss)).join(", ")}</p>`:""}
   ${miss.length?`<h3>${t("Words to review")}</h3><ul class="miss">${miss.map(w=>`<li><span class="hz-s">${esc(w.h)}</span><span>${esc(w.p)}</span><span class="hint">${esc(w.m)}</span></li>`).join("")}</ul>`:`<p>${t("No missed words.")}</p>`}
-  <div class="row">${miss.length?`<button id="rt">${t("Practise missed words")}</button>`:""}<button class="ghost" id="hm">${t("Back to start")}</button></div></section>`;
+  <div class="row">${miss.length?`<button id="rt">${t("Practise missed words")}</button>`:""}<button class="ghost" id="rpt">${t("Repeat session")}</button><button class="ghost" id="hm">${t("Back to start")}</button></div></section>`;
+  $("#rpt").onclick=repeatLast;
   if(miss.length)$("#rt").onclick=()=>run(R.mode,shuf(miss),R.sub);
   $("#hm").onclick=home;
 }
