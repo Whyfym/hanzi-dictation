@@ -75,18 +75,21 @@ window.xToday=()=>{
   <div class="prog"><i style="width:${Math.min(100,n/g*100)}%"></i></div>
   <div class="row"><button id="xr" ${du?"":"disabled"}>${t("Review due words")}</button>
   <label class="hint">${t("Goal")} <input type="number" id="xg" min="1" max="200" value="${g}" style="width:64px"></label>
-  <label class="hint"><input type="checkbox" id="xm" ${mute?"":"checked"}> ${t("Sound")}</label></div></section>
-  <section class="card c-share"><h2>${t("Share")}</h2><div class="row"><button class="ghost" id="xs" ${deck.length||sents.length?"":"disabled"}>${t("Share selected lessons")}</button>
-  <input id="xi" maxlength="6" placeholder="${t("Share code")}" style="width:150px;text-transform:uppercase"><button class="ghost" id="xo">${t("Import")}</button></div><div id="xsm" class="hint" role="status"></div></section>
-  <section class="card c-board"><h2>${t("Weekly leaderboard")}</h2><p class="hint" style="margin:0">${t("New words learned this week")}</p><div id="lb"></div><div id="lbm" class="hint"></div></section>`;
+  <label class="hint"><input type="checkbox" id="xm" ${mute?"":"checked"}> ${t("Sound")}</label></div></section>`;
 };
+window.xShare=()=>`<section class="card c-share"><h2>${t("Share")}</h2><div class="row"><button class="ghost" id="xs" ${deck.length||sents.length?"":"disabled"}>${t("Share selected lessons")}</button>
+  <input id="xi" maxlength="6" placeholder="${t("Share code")}" style="width:150px;text-transform:uppercase"><button class="ghost" id="xo">${t("Import")}</button></div><div id="xsm" class="hint" role="status"></div></section>`;
+window.xBoard=()=>`<section class="card c-board"><h2>${t("Weekly leaderboard")}</h2><p class="hint" style="margin:0">${t("New words learned this week")}</p><div id="lb"></div><div id="lbm" class="hint"></div></section>`;
 window.xBind=()=>{
-  const g=$("#xg");if(!g)return;
   backfill();
-  g.onchange=()=>{daily.goal=Math.max(1,+g.value||10);xChanged();home()};
-  $("#xm").onchange=e=>{mute=!e.target.checked;sv()};
-  $("#xr").onclick=()=>{const c=$("#cnt"),q=xPick(due(),c?+c.value||10:10);if(q.length)run("write",q)};
-  $("#xs").onclick=share;$("#xo").onclick=imp;lb();
+  const g=$("#xg");
+  if(g){
+    g.onchange=()=>{daily.goal=Math.max(1,+g.value||10);xChanged();home()};
+    $("#xm").onchange=ev=>{mute=!ev.target.checked;sv()};
+    $("#xr").onclick=()=>{const q=xPick(due(),due().length);if(q.length)run("write",q)};
+  }
+  if($("#xs")){$("#xs").onclick=share;$("#xo").onclick=imp}
+  if($("#lb"))lb();
 };
 
 async function share(){
