@@ -25,7 +25,7 @@ const toast=m=>{const e=document.createElement("div");e.className="toast";e.text
 const push=()=>{
   if(typeof user=="undefined"||!user||!SB)return;
   clearTimeout(pt);
-  pt=setTimeout(async()=>{try{await SB.from("user_data").upsert({user_id:user.id,data:{deck,sents,sel:[...sel],prog,daily,arch},updated_at:new Date(ts).toISOString()})}catch(e){}},1500);
+  pt=setTimeout(async()=>{try{await SB.from("user_data").upsert({user_id:user.id,data:{deck,sents,sel:[...sel],prog,daily,arch,set:SET},updated_at:new Date(ts).toISOString()})}catch(e){}},1500);
 };
 window.xChanged=()=>{ts=Date.now();sv();push()};
 window.xPull=async()=>{
@@ -33,7 +33,7 @@ window.xPull=async()=>{
   try{
     const{data}=await SB.from("user_data").select("data,updated_at").eq("user_id",user.id).maybeSingle();
     if(data&&Date.parse(data.updated_at)>ts+1000){
-      const d=data.data||{};deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};sel=new Set(d.sel||[]);prog=d.prog||{};daily=d.daily||daily;ts=Date.parse(data.updated_at);sv();
+      const d=data.data||{};deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};if(d.set){SET=Object.assign({size:"m",qpy:true,fpy:false},d.set);try{localStorage.setItem("zw-set",JSON.stringify(SET))}catch(x){}applySet()}sel=new Set(d.sel||[]);prog=d.prog||{};daily=d.daily||daily;ts=Date.parse(data.updated_at);sv();
       try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(e){}
       if(app.querySelector(".grid"))home();
     }else if((deck.length||sents.length)&&(!data||ts>Date.parse(data.updated_at)+1000)){if(!ts)ts=Date.now();push()}
@@ -54,7 +54,7 @@ window.xPick=(pool,n)=>{
   const now=Date.now(),wt=w=>{const p=prog[w.h];return !p?2:p.d<=now?3+(5-p.b):.3};
   return shuf(pool.map(w=>({w,k:Math.random()*wt(w)})).sort((a,b)=>b.k-a.k).slice(0,n).map(x=>x.w));
 };
-const due=()=>{const now=Date.now();return deck.filter(w=>sel.has(w.l)&&prog[w.h]&&prog[w.h].d<=now)};
+const due=()=>{const now=Date.now(),seen=new Set();return allWords().filter(w=>{if(seen.has(w.h))return false;const p=prog[w.h];if(p&&p.d<=now){seen.add(w.h);return true}return false})};
 const newCounts=()=>{
   const d=new Date();d.setHours(0,0,0,0);const a0=d.getTime(),w=new Date(d);w.setDate(w.getDate()-((w.getDay()+6)%7));
   const w0=w.getTime(),m0=new Date(d.getFullYear(),d.getMonth(),1).getTime();let all=0,dy=0,wk=0,mo=0;
@@ -77,24 +77,45 @@ window.xToday=()=>{
   <label class="hint">${t("Goal")} <input type="number" id="xg" min="1" max="200" value="${g}" style="width:64px"></label>
   <label class="hint"><input type="checkbox" id="xm" ${mute?"":"checked"}> ${t("Sound")}</label></div></section>`;
 };
-window.xShare=()=>`<section class="card c-share"><h2>${t("Share")}</h2><div class="row"><button class="ghost" id="xs" ${deck.length||sents.length?"":"disabled"}>${t("Share selected lessons")}</button>
-  <input id="xi" maxlength="6" placeholder="${t("Share code")}" style="width:150px;text-transform:uppercase"><button class="ghost" id="xo">${t("Import")}</button></div><div id="xsm" class="hint" role="status"></div></section>`;
+let shareSel=new Set();
+window.xShare=()=>`<section class="card c-share"><h2>${t("Share")}</h2><p class="hint" style="margin:0">${t("Choose decks")}</p><div class="dlist">${deckList("all",shareSel,"data-sh")}</div>
+  <div class="row"><button class="ghost sm" id="shall">${t("Select all")}</button><button class="ghost sm" id="shnone">${t("Clear")}</button><button id="xs">${t("Share selected lessons")}</button></div>
+  <div class="row"><input id="xi" maxlength="6" placeholder="${t("Share code")}" style="width:150px;text-transform:uppercase"><button class="ghost" id="xo">${t("Import")}</button></div><div id="xsm" class="hint" role="status"></div></section>`;
+window.xStreak=()=>{const td=day();if(daily.last===td||daily.last!==day(-1)||!daily.streak)return "";return `<section class="card nudge"><span class="flame">🔥</span><div>${t("Keep your {0}-day streak alive: study today!",daily.streak)}</div><button id="xgo">${t("Learn")}</button></section>`};
+window.xMast=w=>{const p=prog[w.h];return !!p&&p.b>=3};
+window.xExport=()=>({prog,daily});
+window.xProfile=async()=>{if(typeof user=="undefined"||!user||!SB)return;try{await SB.from("profiles").upsert({user_id:user.id,name:(uname()||displayName()||"?").slice(0,30),avatar_v:(user.user_metadata&&user.user_metadata.avatar_v)||0})}catch(x){}};
+function review(){
+  const q=xPick(due(),due().length);if(!q.length)return;
+  CUR={ds:[t("Review due words")]};
+  app.innerHTML=`<section class="card q"><h2>${t("How do you want to review?")}</h2><p class="hint">${t("{0} available",q.length)}</p><div class="row"><button id="rw">${t("Write on screen")}</button><button id="rq">${t("Meaning quiz")}</button></div><div class="row"><button class="ghost" id="rb">${t("Back")}</button></div></section>`;
+  $("#rw").onclick=()=>run("write",q);$("#rq").onclick=()=>run("quiz",q);$("#rb").onclick=home;
+}
 window.xBoard=()=>`<section class="card c-board"><h2>${t("Weekly leaderboard")}</h2><p class="hint" style="margin:0">${t("New words learned this week")}</p><div id="lb"></div><div id="lbm" class="hint"></div></section>`;
 window.xBind=()=>{
   backfill();
+  if(user&&!window._prof){window._prof=1;xProfile()}
   const g=$("#xg");
   if(g){
     g.onchange=()=>{daily.goal=Math.max(1,+g.value||10);xChanged();home()};
     $("#xm").onchange=ev=>{mute=!ev.target.checked;sv()};
-    $("#xr").onclick=()=>{const q=xPick(due(),due().length);if(q.length)run("write",q)};
+    $("#xr").onclick=review;
   }
-  if($("#xs")){$("#xs").onclick=share;$("#xo").onclick=imp}
+  if($("#xgo"))$("#xgo").onclick=()=>{TAB="learn";window.scrollTo(0,0);home()};
+  if($("#xs")){
+    app.querySelectorAll("[data-sh]").forEach(c=>c.onchange=()=>{c.checked?shareSel.add(c.dataset.sh):shareSel.delete(c.dataset.sh)});
+    $("#shall").onclick=()=>app.querySelectorAll("[data-sh]").forEach(c=>{c.checked=true;shareSel.add(c.dataset.sh)});
+    $("#shnone").onclick=()=>app.querySelectorAll("[data-sh]").forEach(c=>{c.checked=false;shareSel.delete(c.dataset.sh)});
+    $("#xs").onclick=share;$("#xo").onclick=imp;
+  }
   if($("#lb"))lb();
 };
 
 async function share(){
-  const m=$("#xsm"),ws=deck.filter(w=>sel.has(w.l)),ss=sents.filter(w=>sel.has(w.l));
-  if(!SB||!(ws.length||ss.length))return;
+  const m=$("#xsm"),ns=new Set([...app.querySelectorAll("[data-sh]:checked")].map(c=>c.dataset.sh));
+  if(!SB)return;
+  if(!ns.size){m.textContent=t("Select at least one deck.");return}
+  const pick=a=>dedupe(a.filter(w=>ns.has(w.l))),ws=pick(allWords()),ss=pick(allSents());
   const code=Array.from({length:6},()=>"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.random()*32|0]).join("");
   const{error}=await SB.from("shared_decks").insert({code,data:{deck:ws,sents:ss}});
   m.textContent=error?error.message:t("Your share code: {0}",code);
@@ -135,7 +156,7 @@ async function lb(){
   try{
     const{data,error}=await SB.rpc("weekly_words",{since:d.toISOString()});
     if(error){m.textContent=error.message;return}
-    const top=(data||[]).slice(0,10).map(r=>({name:r.name,score:Number(r.words),me:r.user_id===user.id}));
+    const top=(data||[]).slice(0,10).map(r=>({name:r.name,score:Number(r.words),me:r.user_id===user.id,av:avUrl(r.user_id,r.avatar_v)}));
     o.innerHTML=top.length?xPodium(top):"";
     if(!top.length)m.textContent=t("No words learned yet this week.");
   }catch(x){}
@@ -164,12 +185,12 @@ st3.textContent=`.podwrap{position:relative;overflow:hidden;padding-top:4px}
 document.head.append(st3);
 window.xBars=(items,start=1,top)=>{
   top=top||Math.max(1,...items.map(x=>x.score));
-  return `<div class="bars">${items.map((x,i)=>`<div class="prow${x.me?" me":""}" style="--i:${i}"><span class="rk">${start+i}</span><span class="pn">${esc(x.name)}</span><div class="pb2"><i style="--w:${Math.max(4,x.score/top*100)}%"></i></div><b>${x.score}</b></div>`).join("")}</div>`;
+  return `<div class="bars">${items.map((x,i)=>`<div class="prow${x.me?" me":""}" style="--i:${i}"><span class="rk">${start+i}</span><span class="pn">${avHTML(x.av,x.name,"sm")}${esc(x.name)}</span><div class="pb2"><i style="--w:${Math.max(4,x.score/top*100)}%"></i></div><b>${x.score}</b></div>`).join("")}</div>`;
 };
 window.xPodium=(items,conf)=>{
   if(!items.length)return "";
   const H=[150,115,85],order=[1,0,2].filter(i=>items[i]),top=Math.max(1,items[0].score);
-  const col=i=>{const x=items[i];return `<div class="pcol r${i+1}${x.me?" me":""}"><div class="pname">${i==0?`<span class="crown">👑</span>`:""}${esc(x.name)}</div><div class="pscore">${x.score}</div><div class="pbar" style="--h:${H[i]}px"><span>${i+1}</span></div></div>`};
+  const col=i=>{const x=items[i];return `<div class="pcol r${i+1}${x.me?" me":""}"><div class="pav">${i==0?`<span class="crown">👑</span>`:""}${avHTML(x.av,x.name,"big")}</div><div class="pname">${esc(x.name)}</div><div class="pscore">${x.score}</div><div class="pbar" style="--h:${H[i]}px"><span>${i+1}</span></div></div>`};
   const cf=conf?Array.from({length:28},(_,k)=>`<i class="cf" style="--l:${Math.round(Math.random()*100)}%;--d:${(Math.random()*1.8).toFixed(2)}s;--c:${["#f59e0b","#f43f5e","#0ea5e9","#10b981","#8b5cf6"][k%5]}"></i>`).join(""):"";
   return `<div class="podwrap">${cf}<div class="podium">${order.map(col).join("")}</div>${items.length>3?xBars(items.slice(3),4,top):""}</div>`;
 };
