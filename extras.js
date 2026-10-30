@@ -27,7 +27,7 @@ const push=()=>{
   clearTimeout(pt);
   pt=setTimeout(async()=>{try{await SB.from("user_data").upsert({user_id:user.id,data:{deck,sents,sel:[...sel],prog,daily,arch,set:SET},updated_at:new Date(ts).toISOString()})}catch(e){}},1500);
 };
-window.xChanged=()=>{ts=Date.now();sv();push()};
+window.xChanged=()=>{ts=Date.now();sv();push();clsSoon()};
 window.xPull=async()=>{
   if(!user||!SB)return;
   try{
@@ -193,6 +193,19 @@ window.xPodium=(items,conf)=>{
   const col=i=>{const x=items[i];return `<div class="pcol r${i+1}${x.me?" me":""}"><div class="pav">${i==0?`<span class="crown">👑</span>`:""}${avHTML(x.av,x.name,"big")}</div><div class="pname">${esc(x.name)}</div><div class="pscore">${x.score}</div><div class="pbar" style="--h:${H[i]}px"><span>${i+1}</span></div></div>`};
   const cf=conf?Array.from({length:28},(_,k)=>`<i class="cf" style="--l:${Math.round(Math.random()*100)}%;--d:${(Math.random()*1.8).toFixed(2)}s;--c:${["#f59e0b","#f43f5e","#0ea5e9","#10b981","#8b5cf6"][k%5]}"></i>`).join(""):"";
   return `<div class="podwrap">${cf}<div class="podium">${order.map(col).join("")}</div>${items.length>3?xBars(items.slice(3),4,top):""}</div>`;
+};
+let cst;const clsSoon=()=>{clearTimeout(cst);cst=setTimeout(()=>{if(window.classSync)classSync()},5000)};
+window.xProgStats=ws=>{const seen=new Set();let l=0,m=0;ws.forEach(w=>{if(seen.has(w.h))return;seen.add(w.h);const p=prog[w.h];if(p&&p.r>0)l++;if(p&&p.b>=3)m++});return{total:seen.size,learned:l,mastered:m}};
+window.xSummary=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{answers:r+x,correct:r,streak:daily.last===td||daily.last===day(-1)?daily.streak:0,newWeek:newCounts().week}};
+window.classSync=async()=>{
+  if(typeof user=="undefined"||!user||!SB||!window.clsData)return;
+  const cs=clsData();if(!cs.length)return;
+  const sm=xSummary(),now=new Date().toISOString(),rows=[];
+  cs.forEach(c=>{
+    rows.push({class_id:c.class_id,student_id:user.id,deck:"",answers:sm.answers,correct:sm.correct,streak:sm.streak,new_week:sm.newWeek,updated_at:now});
+    c.decks.forEach(r=>{const s=xProgStats(r.words||[]);rows.push({class_id:c.class_id,student_id:user.id,deck:r.deck,total:s.total,learned:s.learned,mastered:s.mastered,updated_at:now})});
+  });
+  try{const{error}=await SB.from("class_progress").upsert(rows);if(error)console.warn("class_progress:",error.message)}catch(x){}
 };
 window.xScore=async p=>{if(!user||!SB||!p)return;try{await SB.from("scores").insert({name:displayName()||"?",points:p})}catch(e){}};
 window.xStats=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{streak:daily.last===td||daily.last===day(-1)?daily.streak:0,goal:daily.goal,today:daily.date===td?daily.n:0,nw:newCounts(),mastered:v.filter(p=>p.b>=5).length,acc:r+x?Math.round(r/(r+x)*100):0,total:r+x,due:due().length}};
