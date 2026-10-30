@@ -183,6 +183,34 @@ button.ghost,.tile,.opt,.tab,.link,.pfb{box-shadow:none}
 .danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 50%,var(--line))}
 .v-me{max-width:640px;margin:0 auto;width:100%}
 .v-words>.c-share{grid-column:1/-1}
+/* fixes: old grid areas, emoji colour, thumb zone, wider desktop */
+.view>.card{grid-area:auto;order:0}
+.v-words>.c-share{grid-column:1/-1}
+.flame,.crown,.nudge .flame,.listenbig span{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+@media(max-width:700px){
+ .study{min-height:calc(100dvh - 120px);display:flex;flex-direction:column}
+ .study .boxes,.study .opts,.study #ans,.study #lq,.study #ar{margin-top:auto}
+ .study:has(#lq[hidden]) .listenbig{margin-top:auto;margin-bottom:auto}
+ .fcwrap{min-height:calc(100dvh - 130px);display:flex;flex-direction:column;justify-content:flex-end;margin-top:0}
+}
+@media(min-width:900px){
+ .v-learn .tiles{grid-template-columns:repeat(3,1fr);gap:16px}
+ .tile{min-height:140px;padding:22px}.tile b{font-size:1.15rem}.tile span{font-size:14px}.tile i{font-size:6.5rem}
+ .dock{width:min(700px,60%)}.dk{min-height:58px;font-size:12px}.dk i{font-size:1.5rem}
+ #app>section.card,#app>.bar{max-width:760px}
+ #app>.bar,#app>section.card.study{max-width:900px}
+ .study{padding:48px 44px}.study .hz{font-size:calc(clamp(4rem,6vw,6.5rem)*var(--hzs,1))}.study .py{font-size:2rem}.study .mn{font-size:1.4rem}
+ .study .opts{grid-template-columns:1fr 1fr;gap:14px}.study .opt{padding:20px;font-size:1.1rem}
+ .fcwrap{max-width:640px}.fc{height:min(460px,60vh)}.face .hz{font-size:calc(clamp(4rem,7vw,7rem)*var(--hzs,1))}
+}
+@media(min-width:1100px){
+ #app{max-width:1240px}
+ .v-home{max-width:none;grid-template-columns:1.1fr .9fr;gap:20px;align-items:start}
+ .v-home>*{grid-column:1}.v-home>.c-board{grid-column:2;grid-row:1/span 6}
+ .v-me{max-width:1000px;grid-template-columns:1fr 1fr;align-items:start}
+ .v-me>*{grid-column:2}.v-me>:first-child{grid-column:1;grid-row:1/span 4}
+ .v-play{max-width:760px}
+}
 @media print{body>*:not(#sheet){display:none!important}#sheet{display:block;color:#000;background:#fff;font:15px/1.4 var(--ui)}#sheet li{margin:0 0 16px}.wb{height:56px;border-bottom:1px solid #000;margin-top:4px}body{background:#fff;padding:0}}
 #sheet{display:none}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -214,7 +242,9 @@ const SAMPLE="# Lesson 1 - Greetings\n你好 | nǐ hǎo | hello\n谢谢 | xièxi
 let deck=[],sents=[],arch={deck:[],sents:[]},sel=new Set(),R;
 try{const d=JSON.parse(localStorage.getItem("hz-deck")||"null");if(d){deck=d.deck;sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};sel=new Set(d.sel)}}catch(e){}
 const save=()=>{try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(e){}if(window.xChanged)xChanged()};
-const say=t=>{try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="zh-CN";u.rate=.8;speechSynthesis.speak(u)}catch(e){}};
+const chain=(fn,btn)=>{let d=0,id;const go=()=>{if(d||(btn&&!btn.isConnected))return;d=1;clearTimeout(id);fn()};if(SET.auto)id=setTimeout(go,1400);return go};
+const askQuit=()=>confirm(t("Leave this session? Your progress is saved, and you can continue from Home."));
+const say=t=>{try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="zh-CN";u.rate=({slow:.6,normal:.8,fast:1})[SET.speed]||.8;speechSynthesis.speak(u)}catch(e){}};
 
 function parse(t){
   const out=[],bad=[],sent=[];let lesson="Lesson 1";
@@ -311,13 +341,17 @@ function settingsCard(){
   return `<section class="card"><h2>${t("Settings")}</h2><div class="setgrid"><label>${t("Language")}${langSelHTML()}</label><label>${t("Theme")}${themeSelHTML()}</label>
   <label>${t("Hanzi size")}<select id="sz">${[["s","Small"],["m","Medium"],["l","Large"]].map(([v,n])=>`<option value="${v}" ${SET.size==v?"selected":""}>${t(n)}</option>`).join("")}</select></label></div>
   <label class="ls"><input type="checkbox" id="sq" ${SET.qpy?"checked":""}> ${t("Show pinyin in quiz")}</label>
-  <label class="ls"><input type="checkbox" id="sf" ${SET.fpy?"checked":""}> ${t("Show pinyin on flashcard front")}</label></section>`;
+  <label class="ls"><input type="checkbox" id="sf" ${SET.fpy?"checked":""}> ${t("Show pinyin on flashcard front")}</label>
+  <label class="ls"><input type="checkbox" id="sa" ${SET.auto?"checked":""}> ${t("Auto-continue after answering")}</label>
+  <div class="setgrid"><label>${t("Voice speed")}<select id="sp">${[["slow","Slow"],["normal","Normal"],["fast","Fast"]].map(([v,n])=>`<option value="${v}" ${SET.speed==v?"selected":""}>${t(n)}</option>`).join("")}</select></label></div></section>`;
 }
 function bindSettings(){
   bindLang();
   const z=$("#sz");if(z)z.onchange=ev=>{SET.size=ev.target.value;saveSet()};
   const q=$("#sq");if(q)q.onchange=ev=>{SET.qpy=ev.target.checked;saveSet()};
   const f=$("#sf");if(f)f.onchange=ev=>{SET.fpy=ev.target.checked;saveSet()};
+  const a=$("#sa");if(a)a.onchange=ev=>{SET.auto=ev.target.checked;saveSet()};
+  const sp=$("#sp");if(sp)sp.onchange=ev=>{SET.speed=ev.target.value;saveSet();say("你好")};
 }
 async function setPhoto(file){
   const m=$("#pme");
@@ -415,7 +449,7 @@ function lis(w){
     const ok=opts[pick]===w;
     bs.forEach((b,i)=>{b.disabled=true;if(opts[i]===w)b.classList.add("right");else if(i==pick)b.classList.add("wrong")});
     $("#lq").insertAdjacentHTML("beforeend",`<p class="hint"><span class="hz-s">${esc(w.h)}</span> ${esc(w.p)} · ${esc(w.m)}</p>`);
-    const c=$("#cf");c.textContent=t("Next");c.onclick=()=>rec(ok)};
+    const c=$("#cf");c.textContent=t("Next");c.onclick=chain(()=>rec(ok),c)};
 }
 function quickJoin(){
   const code=new URLSearchParams(location.search).get("room"),saved=(()=>{try{return localStorage.getItem("zw-gname")||""}catch(e){return ""}})();
@@ -433,7 +467,7 @@ function quickJoin(){
     roomPending=false;history.replaceState(null,"",location.pathname);window.mpJoin(code,v)};
 }
 let TAB="home";
-let SET={size:"m",qpy:true,fpy:false};try{Object.assign(SET,JSON.parse(localStorage.getItem("zw-set")||"{}"))}catch(x){}
+let SET={size:"m",qpy:true,fpy:false,auto:false,speed:"normal"};try{Object.assign(SET,JSON.parse(localStorage.getItem("zw-set")||"{}"))}catch(x){}
 const applySet=()=>document.documentElement.style.setProperty("--hzs",{s:.8,m:1,l:1.25}[SET.size]||1);
 const saveSet=()=>{try{localStorage.setItem("zw-set",JSON.stringify(SET))}catch(x){}applySet();if(window.xChanged)xChanged()};
 applySet();
@@ -579,8 +613,8 @@ function run(mode,q,sub){R={mode,q,i:0,res:[],t:0,sub,ds:CUR.ds,q0:q.slice()};sa
 function step(){if(R.i>=R.q.length)return done();R.t=Date.now();({dict,write,quiz,arr,lis})[R.mode](R.q[R.i])}
 function rec(ok,miss){if(window.xRec)xRec(R.q[R.i],ok);R.res.push({w:R.q[R.i],ok,ms:Date.now()-R.t,miss});R.i++;saveSes();step()}
 function frame(inner){
-  app.innerHTML=`<div class="bar"><button class="ghost" id="quit">${t("Quit")}</button><span>${R.i+1} / ${R.q.length}</span><div class="prog"><i style="width:${R.i/R.q.length*100}%"></i></div></div><section class="card q">${inner}</section>`;
-  $("#quit").onclick=home;
+  app.innerHTML=`<div class="bar"><button class="ghost" id="quit">${t("Quit")}</button><span>${R.i+1} / ${R.q.length}</span><div class="prog"><i style="width:${R.i/R.q.length*100}%"></i></div></div><section class="card q study">${inner}</section>`;
+  $("#quit").onclick=()=>{if(askQuit())home()};
 }
 
 function dict(w){
@@ -590,7 +624,7 @@ function dict(w){
 }
 
 function write(w){
-  const chars=[...w.h].filter(c=>CJK.test(c)),cols=Math.min(chars.length||1,chars.length>4?3:2),sz=Math.max(90,Math.min(220,Math.floor((Math.min(innerWidth,640)-72-10*(cols-1))/cols)));
+  const chars=[...w.h].filter(c=>CJK.test(c)),cols=Math.min(chars.length||1,chars.length>4?3:2),sz=Math.max(90,Math.min(innerWidth>=900?300:220,Math.floor((Math.min(innerWidth,innerWidth>=900?900:640)-(innerWidth>=900?120:72)-10*(cols-1))/cols)));
   frame(`<p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><div class="boxes" id="bx"></div><p id="st" class="hint">${t("Write each stroke. Up to {0} wrong strokes still count as correct; giving up counts as wrong.",MAX_MISS)}</p><div class="row" id="ctl"><button class="ghost" id="ls">${t("Listen")}</button><button class="ghost" id="hn">${t("Hint")}</button><button class="ghost" id="sa">${t("Show answer")}</button></div>`);
   $("#ls").onclick=()=>say(w.h);
   let miss=0,fbk=false,W=[];
@@ -606,7 +640,7 @@ function write(w){
     if(k+1<W.length)return go(k+1);
     const ok=miss<=MAX_MISS;
     $("#st").textContent=(miss?t("Finished with {0} wrong strokes.",miss):t("Perfect, no wrong strokes."))+" "+(ok?t("Counted as correct."):t("Counted as wrong."));
-    $("#ctl").innerHTML=`<button id="nx">${t("Next")}</button>`;$("#nx").onclick=()=>rec(ok,miss)}});
+    $("#ctl").innerHTML=`<button id="nx">${t("Next")}</button>`;$("#nx").onclick=chain(()=>rec(ok,miss),$("#nx"))}});
   go(0);
   $("#hn").onclick=()=>{if(fbk)return;W.forEach(x=>x.showOutline());setTimeout(()=>W.forEach(x=>x.hideOutline()),1500)};
   $("#sa").onclick=()=>{if(fbk)return;W.forEach(x=>{x.cancelQuiz();x.showCharacter()});$("#st").textContent=t("You gave up, so this counts as wrong.");$("#ctl").innerHTML=`<button id="nx">${t("Next")}</button>`;$("#nx").onclick=()=>rec(0,miss)};
@@ -618,7 +652,7 @@ function quiz(w){
   const bs=[...app.querySelectorAll(".opt")];
   bs.forEach(b=>b.onclick=()=>{if(b.disabled)return;pick=+b.dataset.i;bs.forEach(x=>x.classList.toggle("on",x==b));$("#cf").disabled=false});
   $("#cf").onclick=()=>{const ok=o[pick]===w;bs.forEach((b,i)=>{b.disabled=true;if(o[i]===w)b.classList.add("right");else if(i==pick)b.classList.add("wrong")});
-    const c=$("#cf");c.textContent=t("Next");c.onclick=()=>rec(ok)};
+    const c=$("#cf");c.textContent=t("Next");c.onclick=chain(()=>rec(ok),c)};
 }
 
 function arr(w){
@@ -634,7 +668,7 @@ function arr(w){
   draw();
   $("#cf").onclick=()=>{const ok=ord.map(k=>toks[k]).join("")==w.t.join("");
     $("#pool").innerHTML=`<p class="${ok?"":"hint"}">${ok?t("Correct."):t("Not quite. Correct order:")+" "+esc(w.t.join(" "))}</p>`;
-    $("#ctl").innerHTML=`<button id="nx">${t("Next")}</button>`;$("#nx").onclick=()=>rec(ok?1:0)};
+    $("#ctl").innerHTML=`<button id="nx">${t("Next")}</button>`;$("#nx").onclick=chain(()=>rec(ok?1:0),$("#nx"))};
 }
 
 function flash(q0,st){
@@ -667,7 +701,7 @@ function flash(q0,st){
     $("#fl").onclick=ev=>{ev.stopPropagation();say(w.h)};
     $("#fl2").onclick=ev=>{ev.stopPropagation();say(w.h)};
     $("#fy").onclick=()=>decide(true,1);$("#fn").onclick=()=>decide(false,-1);
-    $("#quit").onclick=()=>{window._fk=null;home()};
+    $("#quit").onclick=()=>{if(!askQuit())return;window._fk=null;home()};
     window._fk={flip,decide};
   }
   function end(){
