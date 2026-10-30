@@ -33,7 +33,7 @@ window.xPull=async()=>{
   try{
     const{data}=await SB.from("user_data").select("data,updated_at").eq("user_id",user.id).maybeSingle();
     if(data&&Date.parse(data.updated_at)>ts+1000){
-      const d=data.data||{};deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};if(d.set){SET=Object.assign({size:"m",qpy:true,fpy:false},d.set);try{localStorage.setItem("zw-set",JSON.stringify(SET))}catch(x){}applySet()}sel=new Set(d.sel||[]);prog=d.prog||{};daily=d.daily||daily;ts=Date.parse(data.updated_at);sv();
+      const d=data.data||{};deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};if(d.set){SET=Object.assign({size:"m",qpy:true,fpy:false,auto:false,speed:"normal"},d.set);try{localStorage.setItem("zw-set",JSON.stringify(SET))}catch(x){}applySet()}sel=new Set(d.sel||[]);prog=d.prog||{};daily=d.daily||daily;ts=Date.parse(data.updated_at);sv();
       try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(e){}
       if(app.querySelector(".grid"))home();
     }else if((deck.length||sents.length)&&(!data||ts>Date.parse(data.updated_at)+1000)){if(!ts)ts=Date.now();push()}
