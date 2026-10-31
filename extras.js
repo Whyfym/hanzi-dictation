@@ -2,7 +2,8 @@
 const day=(o=0)=>{const d=new Date(Date.now()+o*864e5);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const ld=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
 let prog=ld("zw-prog",{}),daily=ld("zw-daily",{date:"",n:0,goal:10,streak:0,last:""}),mute=ld("zw-mute",false),ts=+ld("zw-ts",0),pt;
-const sv=()=>{try{localStorage.setItem("zw-prog",JSON.stringify(prog));localStorage.setItem("zw-daily",JSON.stringify(daily));localStorage.setItem("zw-mute",JSON.stringify(mute));localStorage.setItem("zw-ts",String(ts))}catch(e){}};
+let modes=ld("zw-modes",{});
+const sv=()=>{try{localStorage.setItem("zw-prog",JSON.stringify(prog));localStorage.setItem("zw-daily",JSON.stringify(daily));localStorage.setItem("zw-mute",JSON.stringify(mute));localStorage.setItem("zw-modes",JSON.stringify(modes));localStorage.setItem("zw-ts",String(ts))}catch(e){}};
 const st=document.createElement("style");
 st.textContent=`.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 12px;text-align:center}.stats b{display:block;font:800 1.7rem var(--hz)}.stats span{font-size:12.5px;color:var(--mut)}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;box-shadow:var(--sh);animation:tin .3s;z-index:9}@keyframes tin{from{opacity:0;margin-bottom:-12px}}.qr{width:170px;margin:10px auto;background:#fff;padding:6px;border-radius:10px}.qr svg{width:100%;height:auto;display:block}.opt.right,.opt.wrong{animation:bump .3s}@keyframes bump{50%{transform:scale(1.03)}}`;
 document.head.append(st);
@@ -25,7 +26,7 @@ const toast=m=>{const e=document.createElement("div");e.className="toast";e.text
 const push=()=>{
   if(typeof user=="undefined"||!user||!SB)return;
   clearTimeout(pt);
-  pt=setTimeout(async()=>{try{await SB.from("user_data").upsert({user_id:user.id,data:{deck,sents,sel:[...sel],prog,daily,arch,set:SET},updated_at:new Date(ts).toISOString()})}catch(e){}},1500);
+  pt=setTimeout(async()=>{try{await SB.from("user_data").upsert({user_id:user.id,data:{deck,sents,sel:[...sel],prog,daily,arch,set:SET,modes},updated_at:new Date(ts).toISOString()})}catch(e){}},1500);
 };
 window.xChanged=()=>{ts=Date.now();sv();push();clsSoon()};
 window.xPull=async()=>{
@@ -33,16 +34,16 @@ window.xPull=async()=>{
   try{
     const{data}=await SB.from("user_data").select("data,updated_at").eq("user_id",user.id).maybeSingle();
     if(data&&Date.parse(data.updated_at)>ts+1000){
-      const d=data.data||{};deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};if(d.set){SET=Object.assign({size:"m",qpy:true,fpy:false,auto:false,speed:"normal"},d.set);try{localStorage.setItem("zw-set",JSON.stringify(SET))}catch(x){}applySet()}sel=new Set(d.sel||[]);prog=d.prog||{};daily=d.daily||daily;ts=Date.parse(data.updated_at);sv();
+      const d=data.data||{};deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};if(d.set){SET=Object.assign({size:"m",qpy:true,fpy:false,auto:false,speed:"normal"},d.set);try{localStorage.setItem("zw-set",JSON.stringify(SET))}catch(x){}applySet()}sel=new Set(d.sel||[]);prog=d.prog||{};modes=d.modes||modes;daily=d.daily||daily;ts=Date.parse(data.updated_at);sv();
       try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(e){}
       if(app.querySelector(".grid"))home();
     }else if((deck.length||sents.length)&&(!data||ts>Date.parse(data.updated_at)+1000)){if(!ts)ts=Date.now();push()}
   }catch(e){}
 };
 
-window.xRec=(w,ok)=>{
+window.xRec=(w,ok,mode)=>{
   xSnd(ok);
-  const k=w.h,p=prog[k]||{b:0,d:0,r:0,x:0},now=Date.now();
+  const k=w.h,p=prog[k]||{b:0,d:0,r:0,x:0},now=Date.now();if(mode)modes[mode]=(modes[mode]||0)+1;
   if(ok){if(!p.r){p.f=now;logWord(k,now)}p.b=Math.min(5,p.b+1);p.d=now+[0,1,2,4,8,16][p.b]*864e5;p.r++}else{p.b=0;p.d=now;p.x++}
   prog[k]=p;
   const td=day();if(daily.date!==td){daily.date=td;daily.n=0}
@@ -83,7 +84,7 @@ window.xShare=()=>`<section class="card c-share"><h2>${t("Share")}</h2><p class=
   <div class="row"><input id="xi" maxlength="6" placeholder="${t("Share code")}" style="width:150px;text-transform:uppercase"><button class="ghost" id="xo">${t("Import")}</button></div><div id="xsm" class="hint" role="status"></div></section>`;
 window.xStreak=()=>{const td=day();if(daily.last===td||daily.last!==day(-1)||!daily.streak)return "";return `<section class="card nudge"><span class="flame">🔥</span><div>${t("Keep your {0}-day streak alive: study today!",daily.streak)}</div><button id="xgo">${t("Learn")}</button></section>`};
 window.xMast=w=>{const p=prog[w.h];return !!p&&p.b>=3};
-window.xExport=()=>({prog,daily});
+window.xExport=()=>({prog,daily,modes});
 window.xProfile=async()=>{if(typeof user=="undefined"||!user||!SB)return;try{await SB.from("profiles").upsert({user_id:user.id,name:(uname()||displayName()||"?").slice(0,30),avatar_v:(user.user_metadata&&user.user_metadata.avatar_v)||0})}catch(x){}};
 function review(){
   const q=xPick(due(),due().length);if(!q.length)return;
@@ -196,13 +197,13 @@ window.xPodium=(items,conf)=>{
 };
 let cst;const clsSoon=()=>{clearTimeout(cst);cst=setTimeout(()=>{if(window.classSync)classSync()},5000)};
 window.xProgStats=ws=>{const seen=new Set();let l=0,m=0;ws.forEach(w=>{if(seen.has(w.h))return;seen.add(w.h);const p=prog[w.h];if(p&&p.r>0)l++;if(p&&p.b>=3)m++});return{total:seen.size,learned:l,mastered:m}};
-window.xSummary=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{answers:r+x,correct:r,streak:daily.last===td||daily.last===day(-1)?daily.streak:0,newWeek:newCounts().week}};
+window.xSummary=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{answers:r+x,correct:r,streak:daily.last===td||daily.last===day(-1)?daily.streak:0,newWeek:newCounts().week,modes:{...modes}}};
 window.classSync=async()=>{
   if(typeof user=="undefined"||!user||!SB||!window.clsData)return;
   const cs=clsData();if(!cs.length)return;
   const sm=xSummary(),now=new Date().toISOString(),rows=[];
   cs.forEach(c=>{
-    rows.push({class_id:c.class_id,student_id:user.id,deck:"",answers:sm.answers,correct:sm.correct,streak:sm.streak,new_week:sm.newWeek,updated_at:now});
+    rows.push({class_id:c.class_id,student_id:user.id,deck:"",answers:sm.answers,correct:sm.correct,streak:sm.streak,new_week:sm.newWeek,modes:sm.modes,updated_at:now});
     c.decks.forEach(r=>{const s=xProgStats(r.words||[]);rows.push({class_id:c.class_id,student_id:user.id,deck:r.deck,total:s.total,learned:s.learned,mastered:s.mastered,updated_at:now})});
   });
   try{const{error}=await SB.from("class_progress").upsert(rows);if(error)console.warn("class_progress:",error.message)}catch(x){}
