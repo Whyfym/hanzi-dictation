@@ -6,7 +6,8 @@ document.head.append(st);
 let G=null;
 const rid=()=>{try{let i=sessionStorage.getItem("hz-id");if(!i){i=Math.random().toString(36).slice(2,10);sessionStorage.setItem("hz-id",i)}return i}catch(e){return Math.random().toString(36).slice(2,10)}};
 const send=p=>G.ch.send({type:"broadcast",event:"m",payload:p});
-const players=()=>Object.entries(G.ch.presenceState()).map(([id,v])=>({id,name:v[0].name,host:!!v[0].host,av:v[0].av||""}));
+const all=()=>Object.entries(G.ch.presenceState()).map(([id,v])=>({id,name:v[0].name,host:!!v[0].host,av:v[0].av||"",spec:!!v[0].spec}));
+const players=()=>all().filter(p=>!p.spec);
 const bd=b=>`<ol class="miss">${b.map((x,i)=>`<li>${i+1}. ${esc(x.name)} <span class="hint">${x.score}</span></li>`).join("")}</ol>`;
 const speed=(ms,lim)=>Math.max(0,1-ms/(lim*1000));
 
@@ -28,6 +29,7 @@ function hostSetup(){
   const row=(id,label,sec)=>`<label class="ls"><input type="checkbox" id="t${id}" checked> ${label}, ${t("seconds")} <input type="number" id="l${id}" value="${sec}" min="5" max="300" style="width:70px"></label>`;
   app.innerHTML=`<section class="card"><h2>${t("Game settings")}</h2>
   <label class="ls">${t("Questions")} <input type="number" id="gn" value="10" min="1" max="100" style="width:70px"></label>
+  <label class="ls"><input type="checkbox" id="hp" checked> ${t("I will play too")}</label><p class="hint" style="margin:0 0 6px">${t("If off, you only monitor the scores.")}</p>
   <h3>${t("Choose decks")}</h3>${deckTools()}<div class="dlist">${deckList("all",chosen,"data-hd")}</div>
   <p class="hint">Tick one type for a single-type game, or several to mix them.</p>
   ${row("q",t("Meaning quiz"),15)}${row("l",t("Listen & guess"),20)}${row("w",t("Write on screen"),45)}${row("a",t("Arrange sentence"),30)}
@@ -39,7 +41,7 @@ function hostSetup(){
     HS.names=[...ns];
     const ws=dedupe(allWords().filter(w=>ns.has(w.l))),ss=dedupe(allSents().filter(w=>ns.has(w.l)));
     const on=id=>{const e=$("#t"+id);return !!e&&e.checked},enough=allWords().length>=4&&ws.length>0;
-    const s={n:+$("#gn").value||10,tq:on("q")&&enough,tl:on("l")&&enough,tw:on("w")&&ws.length>0,ta:on("a")&&ss.length>0,ll:+$("#ll").value||20,lq:+$("#lq").value||15,lw:+$("#lw").value||45,la:+$("#la").value||30,ws,ss};
+    const s={n:+$("#gn").value||10,hp:$("#hp").checked,tq:on("q")&&enough,tl:on("l")&&enough,tw:on("w")&&ws.length>0,ta:on("a")&&ss.length>0,ll:+$("#ll").value||20,lq:+$("#lq").value||15,lw:+$("#lw").value||45,la:+$("#la").value||30,ws,ss};
     if(!(s.tq||s.tw||s.ta||s.tl)){alert("None of the ticked question types can be used with these decks (quiz needs 4 or more words in total, arrange needs sentences).");return}
     const name=(displayName()||prompt("Your nickname","Host")||"Host").slice(0,14);
     connect(String(100000+Math.floor(Math.random()*900000)),name,true,s);
@@ -49,13 +51,13 @@ function hostSetup(){
 function connect(code,name,host,s){
   if(typeof supabase=="undefined"){alert("The connection library did not load. Check your internet connection.");return}
   if(G)leave(true);
-  G={code,name,host,s,id:rid(),miss:[],score:{}};
+  G={code,name,host,s,id:rid(),miss:[],score:{},spec:!!(host&&s&&!s.hp)};
   G.sb=supabase.createClient(CONFIG.supabaseUrl,CONFIG.supabaseKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
   G.ch=G.sb.channel("hz-"+code,{config:{broadcast:{self:true},presence:{key:G.id}}});
   G.ch.on("broadcast",{event:"m"},({payload})=>onMsg(payload)).on("presence",{event:"sync"},sync).on("presence",{event:"join"},onJoin)
     .subscribe(status=>{
-      if(status==="SUBSCRIBED"){G.ch.track({name,host,av:window.myAvatar?myAvatar():""});lobby();
-        if(!host)setTimeout(()=>{if(G&&!G.on&&!players().some(p=>p.host)){leave(true);home();alert("Room not found. Check the code and try again.")}},3000)}
+      if(status==="SUBSCRIBED"){G.ch.track({name,host,spec:G.spec,av:window.myAvatar?myAvatar():""});lobby();
+        if(!host)setTimeout(()=>{if(G&&!G.on&&!all().some(p=>p.host)){leave(true);home();alert("Room not found. Check the code and try again.")}},3000)}
       else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){if(G){leave(true);home();alert("Could not connect to the game server. Try again.")}}
     });
 }
@@ -68,7 +70,7 @@ function leave(quiet){
 }
 function sync(){
   if(!G)return;
-  if(G.on&&!G.ended&&!G.host&&!players().some(p=>p.host)){leave(true);home();alert("The host left the game.");return}
+  if(G.on&&!G.ended&&!G.host&&!all().some(p=>p.host)){leave(true);home();alert("The host left the game.");return}
   lobby();
 }
 function lobby(){
@@ -77,7 +79,7 @@ function lobby(){
   app.innerHTML=`<section class="card q"><p class="hint">${t("Room code")}</p><div class="code">${G.code}</div>${G.host?`<div id="qr" class="qr"></div>`:""}
   <p class="hint">${G.host?t("Share this code with your classmates, then start."):t("Waiting for the host to start.")}</p>
   <div class="pl">${ps.map(p=>`<span class="chip">${avHTML(p.av,p.name,"sm")}${esc(p.name)}</span>`).join("")}</div>
-  <div class="row">${G.host?`<button id="gs">${t("Start game")}</button>`:""}<button class="ghost" id="lv">${t("Leave")}</button></div></section>`;
+  <div class="row">${G.host?`<button id="gs" ${players().length?"":"disabled"}>${t("Start game")}</button>`:""}<button class="ghost" id="lv">${t("Leave")}</button></div></section>`;
   $("#lv").onclick=()=>leave();
   if(G.host){$("#gs").onclick=hostRun;if(window.qrcode&&$("#qr")){try{const q=qrcode(0,"M");q.addData(location.origin+location.pathname+"?room="+G.code);q.make();$("#qr").innerHTML=q.createSvgTag({cellSize:5,margin:2,scalable:true})}catch(e){}}}
 }
@@ -132,13 +134,13 @@ async function hostRun(){
 function onMsg(m){
   if(!G)return;
   if(m.t=="a"){
-    if(G.host&&G.cur&&m.i===G.cur.i&&!G.cur.ans[m.id]){G.cur.ans[m.id]=m;
+    if(G.host&&G.cur&&m.i===G.cur.i&&!G.cur.ans[m.id]){G.cur.ans[m.id]=m;if(G.spec)monTick();
       if(Object.keys(G.cur.ans).length>=players().length){clearTimeout(G.tm);G.done&&G.done()}}
   }else if(m.t=="pre"){G.on=true;pre(m)}else if(m.t=="q"){if(G.q&&G.q.i===m.i)return;clearInterval(G.cdi);G.on=true;G.q=m;G.sent=false;gq(m)}
   else if(m.t=="r"||m.t=="end"){
     clearInterval(G.iv);G.on=true;
     const me=m.board.find(b=>b.id==G.id);if(me&&!me.ok&&G.q)G.miss.push({...G.q.w,s:G.q.type=="arrange"});
-    if(me&&G.q&&window.xRec)xRec(G.q.w,!!me.ok);
+    if(me&&G.q&&window.xRec)xRec(G.q.w,!!me.ok,"game");
     if(m.t=="end"){G.ended=true;fin(m)}else res(m);
   }
 }
@@ -150,7 +152,7 @@ function submit(a){
   const c=$(".q");if(c)c.innerHTML=`<p class="py">${t("Answer sent")}</p><p class="hint">${t("Waiting for the other players.")}</p>`;
 }
 function gframe(m,inner,onTimeout){
-  app.innerHTML=`<div class="bar"><span>${m.i+1} / ${m.n}</span><div class="prog"><i id="tb" style="width:100%"></i></div><span id="tt">${m.lim}</span></div><section class="card q">${inner}</section>`;
+  app.innerHTML=`<div class="bar"><span>${m.i+1} / ${m.n}</span><div class="prog"><i id="tb" style="width:100%"></i></div><span id="tt">${m.lim}</span></div><section class="card q study">${inner}</section>`;
   const t0=Date.now();clearInterval(G.iv);
   G.iv=setInterval(()=>{
     const left=Math.max(0,m.lim-(Date.now()-t0)/1000),b=$("#tb");
@@ -160,9 +162,10 @@ function gframe(m,inner,onTimeout){
   return t0;
 }
 function gq(m){
+  if(G.spec)return mon(m);
   if(m.type=="quiz"){
     let pick=-1;
-    const t0=gframe(m,`<div class="hz">${esc(m.w.h)}</div><p class="py">${esc(m.w.p)}</p><div class="opts">${m.opts.map((x,i)=>`<button class="opt" data-i="${i}">${esc(x)}</button>`).join("")}</div><div class="row"><button id="cf" disabled>${t("Confirm answer")}</button></div>`,
+    const t0=gframe(m,`<div class="mid"><div><div class="hz">${esc(m.w.h)}</div><p class="py">${esc(m.w.p)}</p></div></div><div class="opts">${m.opts.map((x,i)=>`<button class="opt" data-i="${i}">${esc(x)}</button>`).join("")}</div><div class="row"><button id="cf" disabled>${t("Confirm answer")}</button></div>`,
       ()=>submit({pick,ms:m.lim*1000}));
     const bs=[...app.querySelectorAll(".opt")];
     bs.forEach(b=>b.onclick=()=>{pick=+b.dataset.i;bs.forEach(x=>x.classList.toggle("on",x==b));$("#cf").disabled=false});
@@ -171,7 +174,7 @@ function gq(m){
   }
   if(m.type=="listen"){
     let pick=-1;const hz=m.sub=="hanzi";
-    const t0=gframe(m,`<button class="listenbig" id="lsn"><span>🔊</span><b>${t("Tap to listen")}</b></button><div id="lq" hidden><p class="mn">${t(hz?"Which hanzi did you hear?":"What does it mean?")}</p><div class="opts">${m.opts.map((x,i)=>`<button class="opt${hz?" hzopt":""}" data-i="${i}">${esc(x)}</button>`).join("")}</div><div class="row"><button id="cf" disabled>${t("Confirm answer")}</button></div></div>`,
+    const t0=gframe(m,`<div class="mid"><button class="listenbig" id="lsn"><span>🔊</span><b>${t("Tap to listen")}</b></button></div><div id="lq" hidden><p class="mn">${t(hz?"Which hanzi did you hear?":"What does it mean?")}</p><div class="opts">${m.opts.map((x,i)=>`<button class="opt${hz?" hzopt":""}" data-i="${i}">${esc(x)}</button>`).join("")}</div><div class="row"><button id="cf" disabled>${t("Confirm answer")}</button></div></div>`,
       ()=>submit({pick,ms:m.lim*1000}));
     $("#lsn").onclick=()=>{say(m.w.h);$("#lq").hidden=false;$("#lsn b").textContent=t("Listen again")};
     const bs=[...app.querySelectorAll(".opt")];
@@ -195,14 +198,14 @@ function gq(m){
     return;
   }
   const P={done:0,total:0,miss:0};
-  const t0=gframe(m,`<p class="py">${esc(m.w.p)}</p><p class="mn">${esc(m.w.m)}</p><div class="boxes" id="bx"></div><p id="st2" class="hint">${t("Loading characters")}</p>`,
+  const t0=gframe(m,`<p class="py">${esc(m.w.p)}</p><p class="mn">${esc(m.w.m)}</p><div class="mid"><div class="boxes" id="bx"></div></div><p id="st2" class="hint">${t("Loading characters")}</p>`,
     ()=>submit({ok:false,done:P.done,total:P.total,miss:P.miss,ms:m.lim*1000}));
   const chars=[...m.w.h].filter(c=>CJK.test(c));
   if(typeof HanziWriter=="undefined"||!chars.length)return submit({ok:false,done:0,total:0,miss:0,ms:0});
   Promise.all(chars.map(c=>HanziWriter.loadCharacterData(c))).then(ds=>{
     if(!G||G.sent||G.q!==m)return;
     P.total=ds.reduce((a,d)=>a+d.strokes.length,0);const max=2*P.total,W=[];
-    const ink=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim(),cols=Math.min(chars.length||1,chars.length>4?3:2),sz=Math.max(90,Math.min(220,Math.floor((Math.min(innerWidth,640)-72-10*(cols-1))/cols)));
+    const ink=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim(),cols=Math.min(chars.length||1,chars.length>4?3:2),sz=Math.max(90,Math.min(innerWidth>=900?300:220,Math.floor((Math.min(innerWidth,innerWidth>=900?900:640)-(innerWidth>=900?120:72)-10*(cols-1))/cols)));
     const info=()=>{const e=$("#st2");if(e)e.textContent=t("Strokes done: {0} of {1}. Wrong strokes: {2} of {3} allowed",P.done,P.total,P.miss,max)};info();
     chars.forEach(c=>{const d=document.createElement("div");d.className="tzg";$("#bx").append(d);
       W.push(HanziWriter.create(d,c,{width:sz,height:sz,padding:12,showCharacter:false,showOutline:false,strokeColor:ink,drawingColor:ink,highlightColor:"#c0222f",leniency:1.3}))});
@@ -223,16 +226,29 @@ function startCd(n){
   clearInterval(G.cdi);const e=$("#cdn");if(!e)return;e.textContent=n;
   G.cdi=setInterval(()=>{n--;const x=$("#cdn");if(!x||n<=0){clearInterval(G.cdi);if(x)x.textContent="";return}x.textContent=n;x.classList.remove("tick");void x.offsetWidth;x.classList.add("tick")},1000);
 }
+function mon(m){
+  clearInterval(G.iv);const t0=Date.now();
+  app.innerHTML=`<div class="bar"><span>${t("Question {0} of {1}",m.i+1,m.n)}</span><div class="prog"><i id="tb" style="width:100%"></i></div><span id="tt">${m.lim}</span></div>
+  <section class="card q"><h2>${t("Monitoring")}</h2><p class="hint">${t(MODE_LABEL[m.type=="listen"?"lis":m.type=="arrange"?"arr":m.type]||"")}</p><div class="mid"><div><div class="hz" style="font-size:3.2rem" id="mca">0</div><p class="hint" id="mcl"></p></div></div><div id="mbd"></div></section>`;
+  G.iv=setInterval(()=>{const left=Math.max(0,m.lim-(Date.now()-t0)/1000),b=$("#tb");if(b){b.style.width=left/m.lim*100+"%";$("#tt").textContent=Math.ceil(left)}if(left<=0)clearInterval(G.iv)},250);
+  monTick();
+}
+function monTick(){
+  const n=Object.keys(G.cur?G.cur.ans:{}).length,tot=players().length,a=$("#mca"),l=$("#mcl"),b=$("#mbd");
+  if(a)a.textContent=n+" / "+tot;
+  if(l)l.textContent=t("Answered {0} of {1}",n,tot);
+  if(b&&window.xBars){const items=players().map(p=>({name:p.name,score:G.score[p.id]||0,av:p.av})).sort((x,y)=>y.score-x.score);b.innerHTML=`<h3>${t("Scores")}</h3>`+xBars(items)}
+}
 function res(m){
   const me=m.board.find(b=>b.id==G.id)||{};
-  app.innerHTML=`<section class="card"><h2>${me.ok?t("Correct"):me.pts?t("Partly done"):t("Not this time")}${me.pts?" +"+me.pts:""}</h2><p class="hint">${t("Answer:")} <b>${esc(m.right)}</b></p>${window.xBars?xBars(m.board.slice(0,5).map(b=>({name:b.name,score:b.score,me:b.id==G.id,av:b.av}))):bd(m.board.slice(0,5))}<div class="cd"><span class="hint">${t("Next question in")}</span><b id="cdn">${m.wait||6}</b></div></section>`;
+  app.innerHTML=`<section class="card"><h2>${G.spec?t("Scores"):me.ok?t("Correct"):me.pts?t("Partly done"):t("Not this time")}${me.pts?" +"+me.pts:""}</h2><p class="hint">${t("Answer:")} <b>${esc(m.right)}</b></p>${window.xBars?xBars(m.board.slice(0,G.spec?20:5).map(b=>({name:b.name,score:b.score,me:b.id==G.id,av:b.av}))):bd(m.board.slice(0,G.spec?20:5))}<div class="cd"><span class="hint">${t("Next question in")}</span><b id="cdn">${m.wait||6}</b></div></section>`;
   startCd(m.wait||6);
 }
 function fin(m){
   {const me0=m.board.find(b=>b.id==G.id);if(me0&&window.xScore)xScore(me0.score)}
   const ms=G.miss.filter(w=>!w.s).map(w=>({...w,l:"Missed"})),all=G.miss;
   app.innerHTML=`<section class="card"><h2>${t("Final scores")}</h2>${window.xPodium?xPodium(m.board.map(b=>({name:b.name,score:b.score,me:b.id==G.id,av:b.av})),true):bd(m.board)}
-  ${all.length?`<h3>${t("Your missed words")}</h3><ul class="miss">${all.map(w=>`<li><span class="hz-s">${esc(w.h)}</span><span>${esc(w.p)}</span><span class="hint">${esc(w.m)}</span></li>`).join("")}</ul>`:`<p>${t("You answered everything correctly.")}</p>`}
+  ${all.length?`<h3>${t("Your missed words")}</h3><ul class="miss">${all.map(w=>`<li><span class="hz-s">${esc(w.h)}</span><span>${esc(w.p)}</span><span class="hint">${esc(w.m)}</span></li>`).join("")}</ul>`:`${G.spec?"":`<p>${t("You answered everything correctly.")}</p>`}`}
   <div class="row">${ms.length?`<button id="pm">${t("Practise missed words")}</button>`:""}<button class="ghost" id="hm2">${t("Back to start")}</button></div></section>`;
   if(ms.length)$("#pm").onclick=()=>{leave(true);run("write",shuf(ms))};
   $("#hm2").onclick=()=>leave();
