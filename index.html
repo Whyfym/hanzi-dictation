@@ -229,6 +229,7 @@ button.ghost,.tile,.opt,.tab,.link,.pfb{box-shadow:none}
  .study .hz{font-size:calc(clamp(4.8rem,26vw,7.5rem)*var(--hzs,1))}
 }
 @media(min-width:900px){.adj{display:none}}
+.topr{display:flex;gap:10px;align-items:center}
 @media print{body>*:not(#sheet){display:none!important}#sheet{display:block;color:#000;background:#fff;font:15px/1.4 var(--ui)}#sheet li{margin:0 0 16px}.wb{height:56px;border-bottom:1px solid #000;margin-top:4px}body{background:#fff;padding:0}}
 #sheet{display:none}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -243,6 +244,7 @@ button.ghost,.tile,.opt,.tab,.link,.pfb{box-shadow:none}
 <script src="multiplayer.js"></script>
 <script src="extras.js"></script>
 <script src="classroom.js"></script>
+<script src="guide.js"></script>
 <script>
 // Used by the multiplayer rooms (next step). The publishable key is safe to keep in client code.
 const CONFIG={supabaseUrl:"https://bsxeqczvogjptbqdvbse.supabase.co",supabaseKey:"sb_publishable_B-rFzGRvOOMxHwfjQ5q_ew_nOqstjJN"};
@@ -525,7 +527,7 @@ function dock(){
 function bindDock(){app.querySelectorAll("[data-tab2]").forEach(b=>b.onclick=()=>{TAB=b.dataset.tab2;window.scrollTo(0,0);home()})}
 function topbar(){
   const nm=uname()||(guest?t("Guest"):"");
-  return `<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div><button class="pfb" id="pf" aria-label="${t("Profile")}">${avHTML(myAv(),nm)}</button></header>`;
+  return `<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div><div class="topr"><button class="helpb" id="gd" aria-label="${t("Guide")}">?</button><button class="pfb" id="pf" aria-label="${t("Profile")}">${avHTML(myAv(),nm)}</button></div></header>`;
 }
 function bindTop(){const p=$("#pf");if(p)p.onclick=()=>{TAB="me";window.scrollTo(0,0);home()}}
 
@@ -615,7 +617,7 @@ function home(){
   <div class="row"><input type="file" id="file" accept=".txt,text/plain"><button id="load">${t("Load words")}</button><button class="ghost" id="sample">${t("Try a sample")}</button>${active?`<button class="ghost" id="clr">${t("Archive list")}</button>`:""}</div>
   <div id="msg" aria-live="polite"></div>
   <details><summary>${t("File format")}</summary><pre># Lesson title (optional)\nhanzi | pinyin | meaning\n你好 | nǐ hǎo | hello\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese</pre><p class="hint">One word per line. Separate with | or a tab. Write the meaning in any language you like. Lines starting with [S] are sentences for the arrange game: put spaces between the words.</p></details></section></div><div class="col2">${archCard()}</div>`;
-  const body=TAB=="home"?`${window.xStreak?xStreak():""}${window.xToday?xToday():""}${contCard()}${window.clsHome?clsHome():""}${has?"":empty}${window.xBoard?xBoard():""}`:TAB=="learn"?`${has?tiles:empty}${window.clsLearn?clsLearn():""}`:TAB=="class"?(window.clsView?clsView():""):TAB=="words"?words:(window.mpCard?mpCard():"");
+  const body=TAB=="home"?`${window.guideHome?guideHome():""}${window.xStreak?xStreak():""}${window.xToday?xToday():""}${contCard()}${window.clsHome?clsHome():""}${has?"":empty}${window.xBoard?xBoard():""}`:TAB=="learn"?`${has?tiles:empty}${window.clsLearn?clsLearn():""}`:TAB=="class"?(window.clsView?clsView():""):TAB=="words"?words:(window.mpCard?mpCard():"");
   app.innerHTML=`${topbar()}<div class="view v-${TAB}">${body}</div>${dock()}`;
   const load=txt=>{const{out,bad,sent}=parse(txt);const m=$("#msg");
     if(!out.length&&!sent.length){if(m)m.innerHTML=`<span class="e">${t("No valid words found. Check the file format.")}</span>`;return}
@@ -629,6 +631,7 @@ function home(){
   if(TAB=="play"&&window.mpBind)mpBind();
   if(window.xBind)xBind();
   if(window.clsBind)clsBind();
+  if(window.guideBind)guideBind();
   if($("#clr"))$("#clr").onclick=()=>{archiveOld([],[]);deck=[];sents=[];sel=new Set();save();home()};
   if($("#cres"))$("#cres").onclick=resumeSes;
   if($("#cdis"))$("#cdis").onclick=()=>{setJ(SKEY,null);home()};
