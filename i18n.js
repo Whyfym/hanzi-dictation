@@ -68,3 +68,8 @@ Object.assign(I18N.vi,{"One stroke at a time.":"Từng nét một."});
 Object.assign(I18N.id,{"One stroke at a time.":"Goresan demi goresan."});
 Object.assign(I18N.ru,{"One stroke at a time.":"Черта за чертой."});
 Object.assign(I18N.zh,{"One stroke at a time.":"一笔一划。"});
+
+Object.assign(I18N.vi,{"Write it.":"Viết.","Remember it.":"Nhớ.","Master it.":"Thành thạo."});
+Object.assign(I18N.id,{"Write it.":"Tulis.","Remember it.":"Ingat.","Master it.":"Kuasai."});
+Object.assign(I18N.ru,{"Write it.":"Пиши.","Remember it.":"Запоминай.","Master it.":"Осваивай."});
+Object.assign(I18N.zh,{"Write it.":"写下来。","Remember it.":"记住它。","Master it.":"掌握它。"});
