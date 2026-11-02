@@ -73,3 +73,8 @@ Object.assign(I18N.vi,{"Write it.":"Viết.","Remember it.":"Nhớ.","Master it.
 Object.assign(I18N.id,{"Write it.":"Tulis.","Remember it.":"Ingat.","Master it.":"Kuasai."});
 Object.assign(I18N.ru,{"Write it.":"Пиши.","Remember it.":"Запоминай.","Master it.":"Осваивай."});
 Object.assign(I18N.zh,{"Write it.":"写下来。","Remember it.":"记住它。","Master it.":"掌握它。"});
+
+Object.assign(I18N.vi,{"Copy the words and progress from this device (guest) into your new account?":"Sao chép từ vựng và tiến độ từ thiết bị này (khách) vào tài khoản mới?","Resets every Sunday at midnight (00:00, WIB). Time left: {0}":"Đặt lại vào nửa đêm Chủ nhật (00:00, WIB). Còn lại: {0}"});
+Object.assign(I18N.id,{"Copy the words and progress from this device (guest) into your new account?":"Salin kata dan progres dari perangkat ini (tamu) ke akun barumu?","Resets every Sunday at midnight (00:00, WIB). Time left: {0}":"Direset setiap Minggu malam pukul 00.00 (WIB). Sisa waktu: {0}"});
+Object.assign(I18N.ru,{"Copy the words and progress from this device (guest) into your new account?":"Скопировать слова и прогресс с этого устройства (гость) в новый аккаунт?","Resets every Sunday at midnight (00:00, WIB). Time left: {0}":"Сброс каждое воскресенье в полночь (00:00, WIB). Осталось: {0}"});
+Object.assign(I18N.zh,{"Copy the words and progress from this device (guest) into your new account?":"要把本设备（访客）上的词语和进度复制到新账号吗？","Resets every Sunday at midnight (00:00, WIB). Time left: {0}":"每周日午夜 00:00（WIB）重置，剩余：{0}"});
