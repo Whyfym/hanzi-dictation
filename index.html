@@ -285,8 +285,7 @@ const CJK=/[\u3400-\u9fff]/;
 const MAX_MISS=5; // practice mode: up to this many wrong strokes per word still counts as correct
 const SAMPLE="# Lesson 1 - Greetings\n你好 | nǐ hǎo | hello\n谢谢 | xièxie | thank you\n再见 | zàijiàn | goodbye\n对不起 | duìbuqǐ | sorry\n# Lesson 2 - Campus\n图书馆 | túshūguǎn | library\n学生 | xuésheng | student\n老师 | lǎoshī | teacher\n教室 | jiàoshì | classroom\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese\n[S] 老师 在 教室 里 | lǎoshī zài jiàoshì lǐ | The teacher is in the classroom";
 let deck=[],sents=[],arch={deck:[],sents:[]},sel=new Set(),R;
-try{const d=JSON.parse(localStorage.getItem("hz-deck")||"null");if(d){deck=d.deck;sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};sel=new Set(d.sel)}}catch(e){}
-const save=()=>{try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(e){}if(window.xChanged)xChanged()};
+const save=()=>{try{localStorage.setItem(K("hz-deck"),JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(e){}if(window.xChanged)xChanged()};
 function bindAdjust(key,min,max){
   const wg=$("#wg"),lk=$("#lk"),gp=$("#gp");if(!wg||!lk||!gp)return;
   let locked=true,y0=0,o0=0,drag=false;
@@ -529,14 +528,42 @@ function quickJoin(){
     roomPending=false;history.replaceState(null,"",location.pathname);window.mpJoin(code,v)};
 }
 let TAB="home";
-let SET={size:"m",qpy:true,fpy:false,auto:false,speed:"normal"};try{Object.assign(SET,JSON.parse(localStorage.getItem("zw-set")||"{}"))}catch(x){}
+let SET={size:"m",qpy:true,fpy:false,auto:false,speed:"normal"};
 const applySet=()=>document.documentElement.style.setProperty("--hzs",{s:.8,m:1,l:1.25}[SET.size]||1);
-const saveSet=()=>{try{localStorage.setItem("zw-set",JSON.stringify(SET))}catch(x){}applySet();if(window.xChanged)xChanged()};
+const saveSet=()=>{try{localStorage.setItem(K("zw-set"),JSON.stringify(SET))}catch(x){}applySet();if(window.xChanged)xChanged()};
 applySet();
 const allWords=()=>[...deck,...arch.deck],allSents=()=>[...sents,...arch.sents];
 const dedupe=a=>{const k=new Set();return a.filter(w=>{const x=w.h+"|"+w.l;if(k.has(x))return false;k.add(x);return true})};
-const getJ=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(x){return null}};
-const setJ=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v))}catch(x){}};
+const getJ=k=>{try{return JSON.parse(localStorage.getItem(K(k)))}catch(x){return null}};
+const setJ=(k,v)=>{try{v==null?localStorage.removeItem(K(k)):localStorage.setItem(K(k),JSON.stringify(v))}catch(x){}};
+/* ---- per-account storage: every account (and the guest) has its own namespace on a device ---- */
+let NS="";
+function migrateLegacy(){
+  try{
+    if(localStorage.getItem("zw-migrated"))return;
+    ["hz-deck","zw-prog","zw-daily","zw-modes","zw-set","zw-mute","zw-ts","zw-session","zw-last"].forEach(k=>{
+      const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem("guest:"+k)==null)localStorage.setItem("guest:"+k,v);localStorage.removeItem(k)});
+    localStorage.setItem("zw-migrated","1");
+  }catch(x){}
+}
+function loadState(){
+  deck=[];sents=[];arch={deck:[],sents:[]};sel=new Set();
+  if(NS=="guest")migrateLegacy();
+  try{const d=JSON.parse(localStorage.getItem(NS+":hz-deck")||"null");if(d){deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};sel=new Set(d.sel||[])}}catch(x){}
+  SET={size:"m",qpy:true,fpy:false,auto:false,speed:"normal"};
+  try{Object.assign(SET,JSON.parse(localStorage.getItem(NS+":zw-set")||"{}"))}catch(x){}
+  applySet();
+  if(window.xReload)xReload();
+}
+function applyIdentity(){
+  const n=user?("u"+user.id):"guest";
+  if(n===NS)return false;
+  NS=n;TAB="home";R=null;CUR={ds:[]};loadState();return true;
+}
+const K=k=>{applyIdentity();return NS+":"+k};
+/* weekly boundary: Monday 00:00 in WIB (UTC+7), identical for every user */
+const WOFF=7;
+function weekStart(now){const l=new Date((now||Date.now())+WOFF*36e5),wd=(l.getUTCDay()+6)%7;return Date.UTC(l.getUTCFullYear(),l.getUTCMonth(),l.getUTCDate())-wd*864e5-WOFF*36e5}
 const avColor=n=>{let h=0;for(const c of String(n))h=(h*31+c.charCodeAt(0))%360;return `hsl(${h} 55% 42%)`};
 const avUrl=(uid,v)=>v?`${CONFIG.supabaseUrl}/storage/v1/object/public/avatars/${uid}/avatar.jpg?v=${v}`:"";
 const myAv=()=>user&&user.user_metadata&&user.user_metadata.avatar_v?avUrl(user.id,user.user_metadata.avatar_v):"";
@@ -624,7 +651,7 @@ function pickCount(m,pool){
 }
 
 function home(){
-  onLogin=false;
+  onLogin=false;applyIdentity();
   if(user&&!uname()){nameSetup();return}
   if(TAB=="me"){profile();return}
   const has=allWords().length||allSents().length,active=deck.length||sents.length;
