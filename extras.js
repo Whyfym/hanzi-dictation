@@ -1,9 +1,10 @@
 (()=>{
 const day=(o=0)=>{const d=new Date(Date.now()+o*864e5);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const ld=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
-let prog=ld("zw-prog",{}),daily=ld("zw-daily",{date:"",n:0,goal:10,streak:0,last:""}),mute=ld("zw-mute",false),ts=+ld("zw-ts",0),pt;
-let modes=ld("zw-modes",{});
-const sv=()=>{try{localStorage.setItem("zw-prog",JSON.stringify(prog));localStorage.setItem("zw-daily",JSON.stringify(daily));localStorage.setItem("zw-mute",JSON.stringify(mute));localStorage.setItem("zw-modes",JSON.stringify(modes));localStorage.setItem("zw-ts",String(ts))}catch(e){}};
+const DAILY=()=>({date:"",n:0,goal:10,streak:0,last:""});
+let prog={},daily=DAILY(),mute=false,ts=0,pt,modes={};
+window.xReload=()=>{clearTimeout(pt);prog=ld(K("zw-prog"),{});daily=ld(K("zw-daily"),DAILY());mute=ld(K("zw-mute"),false);ts=+ld(K("zw-ts"),0);modes=ld(K("zw-modes"),{});shareSel=new Set();window._prof=0};
+const sv=()=>{try{localStorage.setItem(K("zw-prog"),JSON.stringify(prog));localStorage.setItem(K("zw-daily"),JSON.stringify(daily));localStorage.setItem(K("zw-mute"),JSON.stringify(mute));localStorage.setItem(K("zw-modes"),JSON.stringify(modes));localStorage.setItem(K("zw-ts"),String(ts))}catch(e){}};
 const st=document.createElement("style");
 st.textContent=`.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 12px;text-align:center}.stats b{display:block;font:800 1.7rem var(--hz)}.stats span{font-size:12.5px;color:var(--mut)}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;box-shadow:var(--sh);animation:tin .3s;z-index:9}@keyframes tin{from{opacity:0;margin-bottom:-12px}}.qr{width:170px;margin:10px auto;background:#fff;padding:6px;border-radius:10px}.qr svg{width:100%;height:auto;display:block}.opt.right,.opt.wrong{animation:bump .3s}@keyframes bump{50%{transform:scale(1.03)}}`;
 document.head.append(st);
@@ -31,15 +32,34 @@ const push=()=>{
 window.xChanged=()=>{ts=Date.now();sv();push();clsSoon()};
 window.xPull=async()=>{
   if(!user||!SB)return;
+  applyIdentity();const uid=user.id;
   try{
-    const{data}=await SB.from("user_data").select("data,updated_at").eq("user_id",user.id).maybeSingle();
+    const{data}=await SB.from("user_data").select("data,updated_at").eq("user_id",uid).maybeSingle();
+    if(!user||user.id!==uid)return;
     if(data&&Date.parse(data.updated_at)>ts+1000){
-      const d=data.data||{};deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};if(d.set){SET=Object.assign({size:"m",qpy:true,fpy:false,auto:false,speed:"normal"},d.set);try{localStorage.setItem("zw-set",JSON.stringify(SET))}catch(x){}applySet()}sel=new Set(d.sel||[]);prog=d.prog||{};modes=d.modes||modes;daily=d.daily||daily;ts=Date.parse(data.updated_at);sv();
-      try{localStorage.setItem("hz-deck",JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(e){}
-      if(app.querySelector(".grid"))home();
+      const d=data.data||{};deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};
+      if(d.set){SET=Object.assign({size:"m",qpy:true,fpy:false,auto:false,speed:"normal"},d.set);try{localStorage.setItem(K("zw-set"),JSON.stringify(SET))}catch(x){}applySet()}
+      sel=new Set(d.sel||[]);prog=d.prog||{};modes=d.modes||{};daily=d.daily||DAILY();ts=Date.parse(data.updated_at);sv();
+      try{localStorage.setItem(K("hz-deck"),JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(x){}
+      if(app.querySelector(".view"))home();
     }else if((deck.length||sents.length)&&(!data||ts>Date.parse(data.updated_at)+1000)){if(!ts)ts=Date.now();push()}
-  }catch(e){}
+    else if(!data)adoptGuest();
+  }catch(x){}
 };
+function adoptGuest(){
+  try{
+    const flag=K("zw-adopt");if(localStorage.getItem(flag))return;
+    const g=JSON.parse(localStorage.getItem("guest:hz-deck")||"null"),a=g&&g.arch||{};
+    if(!g||!((g.deck||[]).length||(g.sents||[]).length||(a.deck||[]).length||(a.sents||[]).length))return;
+    localStorage.setItem(flag,"1");
+    if(!confirm(t("Copy the words and progress from this device (guest) into your new account?")))return;
+    const rd=(k,d)=>{try{const v=JSON.parse(localStorage.getItem("guest:"+k));return v==null?d:v}catch(x){return d}};
+    deck=g.deck||[];sents=g.sents||[];arch=g.arch||{deck:[],sents:[]};sel=new Set(g.sel||[]);
+    prog=rd("zw-prog",{});daily=rd("zw-daily",DAILY());modes=rd("zw-modes",{});
+    try{localStorage.setItem(K("hz-deck"),JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(x){}
+    ts=Date.now();sv();push();if(app.querySelector(".view"))home();
+  }catch(x){}
+}
 
 window.xRec=(w,ok,mode)=>{
   xSnd(ok);
@@ -58,7 +78,7 @@ window.xPick=(pool,n)=>{
 const due=()=>{const now=Date.now(),seen=new Set();return allWords().filter(w=>{if(seen.has(w.h))return false;const p=prog[w.h];if(p&&p.d<=now){seen.add(w.h);return true}return false})};
 const newCounts=()=>{
   const d=new Date();d.setHours(0,0,0,0);const a0=d.getTime(),w=new Date(d);w.setDate(w.getDate()-((w.getDay()+6)%7));
-  const w0=w.getTime(),m0=new Date(d.getFullYear(),d.getMonth(),1).getTime();let all=0,dy=0,wk=0,mo=0;
+  const w0=weekStart(),m0=new Date(d.getFullYear(),d.getMonth(),1).getTime();let all=0,dy=0,wk=0,mo=0;
   Object.values(prog).forEach(p=>{if(p.r>0)all++;if(p.f){if(p.f>=a0)dy++;if(p.f>=w0)wk++;if(p.f>=m0)mo++}});
   return{today:dy,week:wk,month:mo,all};
 };
@@ -92,7 +112,7 @@ function review(){
   app.innerHTML=`<section class="card q"><h2>${t("How do you want to review?")}</h2><p class="hint">${t("{0} available",q.length)}</p><div class="row"><button id="rw">${t("Write on screen")}</button><button id="rq">${t("Meaning quiz")}</button></div><div class="row"><button class="ghost" id="rb">${t("Back")}</button></div></section>`;
   $("#rw").onclick=()=>run("write",q);$("#rq").onclick=()=>run("quiz",q);$("#rb").onclick=home;
 }
-window.xBoard=()=>`<section class="card c-board"><h2>${t("Weekly leaderboard")}</h2><p class="hint" style="margin:0">${t("New words learned this week")}</p><div id="lb"></div><div id="lbm" class="hint"></div></section>`;
+window.xBoard=()=>`<section class="card c-board"><h2>${t("Weekly leaderboard")}</h2><p class="hint" style="margin:0">${t("New words learned this week")}</p><p class="hint" id="lbr" style="margin:4px 0 0"></p><div id="lb"></div><div id="lbm" class="hint"></div></section>`;
 window.xBind=()=>{
   backfill();
   if(user&&!window._prof){window._prof=1;xProfile()}
@@ -151,9 +171,10 @@ async function backfill(){
 }
 async function lb(){
   const o=$("#lb"),m=$("#lbm");if(!o)return;
+  const rr=$("#lbr");if(rr){const ms=weekStart()+7*864e5-Date.now(),dd=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5);rr.textContent=t("Resets every Sunday at midnight (00:00, WIB). Time left: {0}",dd+"d "+hh+"h")}
   if(!user){m.textContent=t("Sign in to join the leaderboard.");return}
   await backfill();
-  const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));
+  const d=new Date(weekStart());
   try{
     const{data,error}=await SB.rpc("weekly_words",{since:d.toISOString()});
     if(error){m.textContent=error.message;return}
@@ -210,5 +231,5 @@ window.classSync=async()=>{
 };
 window.xScore=async p=>{if(!user||!SB||!p)return;try{await SB.from("scores").insert({name:displayName()||"?",points:p})}catch(e){}};
 window.xStats=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{streak:daily.last===td||daily.last===day(-1)?daily.streak:0,goal:daily.goal,today:daily.date===td?daily.n:0,nw:newCounts(),mastered:v.filter(p=>p.b>=5).length,acc:r+x?Math.round(r/(r+x)*100):0,total:r+x,due:due().length}};
-window.xWeek=async()=>{if(!user||!SB)return 0;const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));try{const{data}=await SB.from("scores").select("points").eq("user_id",user.id).gte("created_at",d.toISOString());return(data||[]).reduce((a,r)=>a+r.points,0)}catch(e){return 0}};
+window.xWeek=async()=>{if(!user||!SB)return 0;const d=new Date(weekStart());try{const{data}=await SB.from("scores").select("points").eq("user_id",user.id).gte("created_at",d.toISOString());return(data||[]).reduce((a,r)=>a+r.points,0)}catch(e){return 0}};
 })();
