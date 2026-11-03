@@ -2,9 +2,9 @@
 const day=(o=0)=>{const d=new Date(Date.now()+o*864e5);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const ld=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
 const DAILY=()=>({date:"",n:0,goal:10,streak:0,last:""});
-let prog={},daily=DAILY(),mute=false,ts=0,pt,modes={};
-window.xReload=()=>{clearTimeout(pt);prog=ld(K("zw-prog"),{});daily=ld(K("zw-daily"),DAILY());mute=ld(K("zw-mute"),false);ts=+ld(K("zw-ts"),0);modes=ld(K("zw-modes"),{});shareSel=new Set();window._prof=0};
-const sv=()=>{try{localStorage.setItem(K("zw-prog"),JSON.stringify(prog));localStorage.setItem(K("zw-daily"),JSON.stringify(daily));localStorage.setItem(K("zw-mute"),JSON.stringify(mute));localStorage.setItem(K("zw-modes"),JSON.stringify(modes));localStorage.setItem(K("zw-ts"),String(ts))}catch(e){}};
+let prog={},daily=DAILY(),mute=false,ts=0,pt,modes={},md={},lastAct=0;
+window.xReload=()=>{clearTimeout(pt);prog=ld(K("zw-prog"),{});daily=ld(K("zw-daily"),DAILY());mute=ld(K("zw-mute"),false);ts=+ld(K("zw-ts"),0);modes=ld(K("zw-modes"),{});md=ld(K("zw-moded"),{});lastAct=+ld(K("zw-lastact"),0);shareSel=new Set();window._prof=0};
+const sv=()=>{try{localStorage.setItem(K("zw-prog"),JSON.stringify(prog));localStorage.setItem(K("zw-daily"),JSON.stringify(daily));localStorage.setItem(K("zw-mute"),JSON.stringify(mute));localStorage.setItem(K("zw-modes"),JSON.stringify(modes));localStorage.setItem(K("zw-moded"),JSON.stringify(md));localStorage.setItem(K("zw-lastact"),String(lastAct));localStorage.setItem(K("zw-ts"),String(ts))}catch(e){}};
 const st=document.createElement("style");
 st.textContent=`.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 12px;text-align:center}.stats b{display:block;font:800 1.7rem var(--hz)}.stats span{font-size:12.5px;color:var(--mut)}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;box-shadow:var(--sh);animation:tin .3s;z-index:9}@keyframes tin{from{opacity:0;margin-bottom:-12px}}.qr{width:170px;margin:10px auto;background:#fff;padding:6px;border-radius:10px}.qr svg{width:100%;height:auto;display:block}.opt.right,.opt.wrong{animation:bump .3s}@keyframes bump{50%{transform:scale(1.03)}}`;
 document.head.append(st);
@@ -27,7 +27,7 @@ const toast=m=>{const e=document.createElement("div");e.className="toast";e.text
 const push=()=>{
   if(typeof user=="undefined"||!user||!SB)return;
   clearTimeout(pt);
-  pt=setTimeout(async()=>{try{await SB.from("user_data").upsert({user_id:user.id,data:{deck,sents,sel:[...sel],prog,daily,arch,set:SET,modes},updated_at:new Date(ts).toISOString()})}catch(e){}},1500);
+  pt=setTimeout(async()=>{try{await SB.from("user_data").upsert({user_id:user.id,data:{deck,sents,sel:[...sel],prog,daily,arch,set:SET,modes,md,lastAct},updated_at:new Date(ts).toISOString()})}catch(e){}},1500);
 };
 window.xChanged=()=>{ts=Date.now();sv();push();clsSoon()};
 window.xPull=async()=>{
@@ -39,7 +39,7 @@ window.xPull=async()=>{
     if(data&&Date.parse(data.updated_at)>ts+1000){
       const d=data.data||{};deck=d.deck||[];sents=d.sents||[];arch=d.arch||{deck:[],sents:[]};
       if(d.set){SET=Object.assign({size:"m",qpy:true,fpy:false,auto:false,speed:"normal"},d.set);try{localStorage.setItem(K("zw-set"),JSON.stringify(SET))}catch(x){}applySet()}
-      sel=new Set(d.sel||[]);prog=d.prog||{};modes=d.modes||{};daily=d.daily||DAILY();ts=Date.parse(data.updated_at);sv();
+      sel=new Set(d.sel||[]);prog=d.prog||{};modes=d.modes||{};md=d.md||{};lastAct=d.lastAct||0;daily=d.daily||DAILY();ts=Date.parse(data.updated_at);sv();
       try{localStorage.setItem(K("hz-deck"),JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(x){}
       if(app.querySelector(".view"))home();
     }else if((deck.length||sents.length)&&(!data||ts>Date.parse(data.updated_at)+1000)){if(!ts)ts=Date.now();push()}
@@ -63,7 +63,8 @@ function adoptGuest(){
 
 window.xRec=(w,ok,mode)=>{
   xSnd(ok);
-  const k=w.h,p=prog[k]||{b:0,d:0,r:0,x:0},now=Date.now();if(mode)modes[mode]=(modes[mode]||0)+1;
+  const k=w.h,p=prog[k]||{b:0,d:0,r:0,x:0},now=Date.now();lastAct=now;if(mode)modes[mode]=(modes[mode]||0)+1;
+  if(mode&&w.l){const dm=md[w.l]||(md[w.l]={}),cc=dm[mode]||(dm[mode]=[0,0]);cc[0]++;if(ok)cc[1]++}
   if(ok){if(!p.r){p.f=now;logWord(k,now)}p.b=Math.min(5,p.b+1);p.d=now+[0,1,2,4,8,16][p.b]*864e5;p.r++}else{p.b=0;p.d=now;p.x++}
   prog[k]=p;
   const td=day();if(daily.date!==td){daily.date=td;daily.n=0}
@@ -85,14 +86,14 @@ const newCounts=()=>{
 function fire(n){
   const o=document.createElement("div");o.className="fire";
   const sp=Array.from({length:16},()=>`<i class="sp" style="--x:${Math.round(Math.random()*240-120)}px;--d:${(Math.random()*.6).toFixed(2)}s"></i>`).join("");
-  o.innerHTML=`<div class="fire-in">${sp}<div class="flame">Ã°ÂŸÂ”Â¥</div><div class="fire-n">${t("{0}-day streak!",n)}</div><div class="fire-s">${t("Keep it burning!")}</div></div>`;
+  o.innerHTML=`<div class="fire-in">${sp}<div class="flame">🔥</div><div class="fire-n">${t("{0}-day streak!",n)}</div><div class="fire-s">${t("Keep it burning!")}</div></div>`;
   o.onclick=()=>o.remove();document.body.append(o);setTimeout(()=>o.remove(),3200);
 }
 
 window.xToday=()=>{
   const td=day(),n=daily.date===td?daily.n:0,g=daily.goal,du=due().length,sk=daily.last===td||daily.last===day(-1)?daily.streak:0;
   return `<section class="card c-today"><h2>${t("Today")}</h2>
-  <div class="stats s4"><div><b>${sk?`<span class="flame sm">Ã°ÂŸÂ”Â¥</span> `:""}${sk}</b><span>${t("Day streak")}</span></div><div><b>${newCounts().today}</b><span>${t("New words today")}</span></div><div><b>${n}/${g}</b><span>${t("Daily goal")}</span></div><div><b>${du}</b><span>${t("Due for review")}</span></div></div>
+  <div class="stats s4"><div><b>${sk?`<span class="flame sm">🔥</span> `:""}${sk}</b><span>${t("Day streak")}</span></div><div><b>${newCounts().today}</b><span>${t("New words today")}</span></div><div><b>${n}/${g}</b><span>${t("Daily goal")}</span></div><div><b>${du}</b><span>${t("Due for review")}</span></div></div>
   <div class="prog"><i style="width:${Math.min(100,n/g*100)}%"></i></div>
   <div class="row"><button id="xr" ${du?"":"disabled"}>${t("Review due words")}</button>
   <label class="hint">${t("Goal")} <input type="number" id="xg" min="1" max="200" value="${g}" style="width:64px"></label>
@@ -102,9 +103,9 @@ let shareSel=new Set();
 window.xShare=()=>`<section class="card c-share"><h2>${t("Share")}</h2><p class="hint" style="margin:0">${t("Choose decks")}</p><div class="dlist">${deckList("all",shareSel,"data-sh")}</div>
   <div class="row"><button class="ghost sm" id="shall">${t("Select all")}</button><button class="ghost sm" id="shnone">${t("Clear")}</button><button id="xs">${t("Share selected lessons")}</button></div>
   <div class="row"><input id="xi" maxlength="6" placeholder="${t("Share code")}" style="width:150px;text-transform:uppercase"><button class="ghost" id="xo">${t("Import")}</button></div><div id="xsm" class="hint" role="status"></div></section>`;
-window.xStreak=()=>{const td=day();if(daily.last===td||daily.last!==day(-1)||!daily.streak)return "";return `<section class="card nudge"><span class="flame">Ã°ÂŸÂ”Â¥</span><div>${t("Keep your {0}-day streak alive: study today!",daily.streak)}</div><button id="xgo">${t("Learn")}</button></section>`};
+window.xStreak=()=>{const td=day();if(daily.last===td||daily.last!==day(-1)||!daily.streak)return "";return `<section class="card nudge"><span class="flame">🔥</span><div>${t("Keep your {0}-day streak alive: study today!",daily.streak)}</div><button id="xgo">${t("Learn")}</button></section>`};
 window.xMast=w=>{const p=prog[w.h];return !!p&&p.b>=3};
-window.xExport=()=>({prog,daily,modes});
+window.xExport=()=>({prog,daily,modes,studyByDeck:md,lastActive:lastAct});
 window.xProfile=async()=>{if(typeof user=="undefined"||!user||!SB)return;try{await SB.from("profiles").upsert({user_id:user.id,name:(uname()||displayName()||"?").slice(0,30),avatar_v:(user.user_metadata&&user.user_metadata.avatar_v)||0})}catch(x){}};
 function review(){
   const q=xPick(due(),due().length);if(!q.length)return;
@@ -212,29 +213,27 @@ window.xBars=(items,start=1,top)=>{
 window.xPodium=(items,conf)=>{
   if(!items.length)return "";
   const H=[150,115,85],order=[1,0,2].filter(i=>items[i]),top=Math.max(1,items[0].score);
-  const col=i=>{const x=items[i];return `<div class="pcol r${i+1}${x.me?" me":""}"><div class="pav">${i==0?`<span class="crown">Ã°ÂŸÂ‘Â‘</span>`:""}${avHTML(x.av,x.name,"big")}</div><div class="pname">${esc(x.name)}</div><div class="pscore">${x.score}</div><div class="pbar" style="--h:${H[i]}px"><span>${i+1}</span></div></div>`};
+  const col=i=>{const x=items[i];return `<div class="pcol r${i+1}${x.me?" me":""}"><div class="pav">${i==0?`<span class="crown">👑</span>`:""}${avHTML(x.av,x.name,"big")}</div><div class="pname">${esc(x.name)}</div><div class="pscore">${x.score}</div><div class="pbar" style="--h:${H[i]}px"><span>${i+1}</span></div></div>`};
   const cf=conf?Array.from({length:28},(_,k)=>`<i class="cf" style="--l:${Math.round(Math.random()*100)}%;--d:${(Math.random()*1.8).toFixed(2)}s;--c:${["#f59e0b","#f43f5e","#0ea5e9","#10b981","#8b5cf6"][k%5]}"></i>`).join(""):"";
   return `<div class="podwrap">${cf}<div class="podium">${order.map(col).join("")}</div>${items.length>3?xBars(items.slice(3),4,top):""}</div>`;
 };
-let cst;const clsSoon=()=>{clearTimeout(cst);cst=setTimeout(()=>{if(window.classSync)classSync()},1200)};
+let cst;const clsSoon=()=>{clearTimeout(cst);cst=setTimeout(()=>{if(window.classSync)classSync()},5000)};
 window.xProgStats=ws=>{const seen=new Set();let l=0,m=0;ws.forEach(w=>{if(seen.has(w.h))return;seen.add(w.h);const p=prog[w.h];if(p&&p.r>0)l++;if(p&&p.b>=3)m++});return{total:seen.size,learned:l,mastered:m}};
 window.xSummary=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{answers:r+x,correct:r,streak:daily.last===td||daily.last===day(-1)?daily.streak:0,newWeek:newCounts().week,modes:{...modes}}};
 window.classSync=async()=>{
   if(typeof user=="undefined"||!user||!SB||!window.clsData)return;
   const cs=clsData();if(!cs.length)return;
-  const sm=xSummary(),now=new Date().toISOString(),rows=[];
+  if(!lastAct&&!daily.last&&!Object.keys(prog).length)return;
+  const sm=xSummary(),at=new Date(lastAct||(daily.last?Date.parse(daily.last+"T12:00:00"):Date.now())).toISOString(),rows=[];
+  /* every row carries every column: a bulk upsert with different keys per row is rejected (NOT NULL) */
+  const row=(cid,deckName,o)=>Object.assign({class_id:cid,student_id:user.id,deck:deckName,total:0,learned:0,mastered:0,answers:0,correct:0,streak:0,new_week:0,modes:{},updated_at:at},o);
   cs.forEach(c=>{
-    rows.push({class_id:c.class_id,student_id:user.id,deck:"",answers:sm.answers,correct:sm.correct,streak:sm.streak,new_week:sm.newWeek,modes:sm.modes,updated_at:now});
-    c.decks.forEach(r=>{const s=xProgStats(r.words||[]);rows.push({class_id:c.class_id,student_id:user.id,deck:r.deck,total:s.total,learned:s.learned,mastered:s.mastered,updated_at:now})});
+    rows.push(row(c.class_id,"",{answers:sm.answers,correct:sm.correct,streak:sm.streak,new_week:sm.newWeek,modes:sm.modes}));
+    c.decks.forEach(r=>{const s=xProgStats(r.words||[]);rows.push(row(c.class_id,r.deck,{total:s.total,learned:s.learned,mastered:s.mastered,modes:md[r.deck]||{}}))});
   });
-  try{const{error}=await SB.from("class_progress").upsert(rows,{onConflict:"class_id,student_id,deck"});if(error){console.error("class_progress sync failed:",error);window.__classSyncError=error.message;return false}window.__classSyncError="";return true}catch(x){console.error("class_progress sync exception:",x);window.__classSyncError=x?.message||String(x);return false}
+  try{const{error}=await SB.from("class_progress").upsert(rows);if(error)console.warn("class_progress:",error.message)}catch(x){console.warn("class_progress:",x)}
 };
 window.xScore=async p=>{if(!user||!SB||!p)return;try{await SB.from("scores").insert({name:displayName()||"?",points:p})}catch(e){}};
 window.xStats=()=>{const v=Object.values(prog),r=v.reduce((a,p)=>a+p.r,0),x=v.reduce((a,p)=>a+p.x,0),td=day();return{streak:daily.last===td||daily.last===day(-1)?daily.streak:0,goal:daily.goal,today:daily.date===td?daily.n:0,nw:newCounts(),mastered:v.filter(p=>p.b>=5).length,acc:r+x?Math.round(r/(r+x)*100):0,total:r+x,due:due().length}};
 window.xWeek=async()=>{if(!user||!SB)return 0;const d=new Date(weekStart());try{const{data}=await SB.from("scores").select("points").eq("user_id",user.id).gte("created_at",d.toISOString());return(data||[]).reduce((a,r)=>a+r.points,0)}catch(e){return 0}};
 })();
-
-
-window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&window.classSync)window.classSync()});
-window.addEventListener('pagehide',()=>{if(window.classSync)window.classSync()});
-
