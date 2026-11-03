@@ -9,6 +9,7 @@ st.textContent=`.cls .clshead{display:flex;gap:12px;align-items:center;justify-c
 .stu{padding:12px 0;border-bottom:1px solid var(--soft)}.stu:last-child{border-bottom:0}.stu .sh{display:flex;gap:10px;align-items:center}.stu .sn{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stu summary{list-style:none;cursor:pointer}.stu summary::-webkit-details-marker{display:none}.stu summary .sh:after{content:"▾";color:var(--mut)}.stu[open] summary .sh:after{content:"▴"}.sdb{padding:6px 0 2px}.sdb h4{margin:12px 0 4px;font-size:.9rem}
 .stu .ss{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--mut);margin:6px 0}.drw{margin:6px 0}.drw .dt{display:flex;justify-content:space-between;font-size:12.5px;gap:8px;margin-bottom:3px}
+.dsec{margin:10px 0 4px;padding:8px 10px;border:1px solid var(--soft);border-radius:12px}.dsec .mm{margin-top:6px}
 .mrow{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}
 @media(min-width:900px){.v-class{grid-template-columns:1fr 1fr;align-items:start}.v-class>.wide{grid-column:1/-1}}`;
 document.head.append(st);
@@ -109,20 +110,26 @@ function deckRows(cid,manage){
     <div class="row"><button class="sm" data-study="${i}">${t("Study")}</button>${manage?`<button class="ghost sm" data-rmd="${i}">${t("Remove")}</button>`:""}</div></div>`}).join("");
 }
 const bar=(l,m)=>`<div class="cbar"><i class="l" style="width:${l}%"></i><i class="m" style="width:${m}%"></i></div>`;
+function mrows(md){
+  const e=Object.entries(md||{}).map(([k,v])=>[k,Array.isArray(v)?v[0]:+v,Array.isArray(v)?v[1]:null]).filter(x=>x[1]>0);
+  const tot=e.reduce((a,x)=>a+x[1],0);
+  if(!tot)return `<p class="hint" style="margin:2px 0">-</p>`;
+  return e.sort((a,b)=>b[1]-a[1]).map(([k,n,c2])=>`<div class="mrow"><span>${t(k=="game"?"Play":(MODE_LABEL[k]||k))}</span>${bar(pct(n,tot),pct(n,tot))}<b>${pct(n,tot)}%${c2==null?"":" · "+pct(c2,n)+"%"}</b></div>`).join("");
+}
 function studentsHTML(){
   const P=CL.panel;
   if(!P)return `<p class="hint">${t("Loading")}</p>`;
   if(!P.members.length)return `<p class="hint">${t("No students yet.")}</p>`;
   return P.members.map(m=>{
     const pr=P.prof[m.student_id]||{},rp=P.progress.filter(x=>x.student_id===m.student_id),sum=rp.find(x=>x.deck==="")||{};
-    const last=rp.reduce((a,x)=>!a||x.updated_at>a?x.updated_at:a,null),dk=rp.filter(x=>x.deck!=="");
+    const last=rp.reduce((a,x)=>!a||x.updated_at>a?x.updated_at:a,null),dk=rp.filter(x=>x.deck!=="").sort((a,b)=>a.deck.localeCompare(b.deck));
     const tl=dk.reduce((a,x)=>a+x.total,0),ln=dk.reduce((a,x)=>a+x.learned,0),ms=dk.reduce((a,x)=>a+x.mastered,0);
-    const md=sum.modes||{},mt=Object.values(md).reduce((a,b)=>a+b,0);
     return `<details class="stu"><summary><div class="sh">${avHTML(avUrl(m.student_id,pr.avatar_v),pr.name||"?")}<span class="sn">${esc(pr.name||"?")}</span></div>
-    <div class="ss"><span>${t("Last active")}: ${ago(last)}</span><span>🔥 ${sum.streak||0}</span><span>${t("This week")}: ${sum.new_week||0}</span><span>${t("Accuracy")}: ${pct(sum.correct||0,sum.answers||0)}%</span></div></summary>
+    ${rp.length?`<div class="ss"><span>${t("Last active")}: ${ago(last)}</span><span>🔥 ${sum.streak||0}</span><span>${t("This week")}: ${sum.new_week||0}</span><span>${t("Accuracy")}: ${pct(sum.correct||0,sum.answers||0)}%</span></div>`:`<div class="ss"><span>${t("No activity yet.")}</span></div>`}</summary>
     <div class="sdb"><div class="drw"><div class="dt"><b>${t("Class decks")}</b><span>${t("{0} of {1} learned",ln,tl)} · ${pct(ln,tl)}%</span></div>${bar(pct(ln,tl),pct(ms,tl))}</div>
-    ${dk.map(x=>`<div class="drw"><div class="dt"><span>${esc(x.deck)}</span><span>${t("{0} of {1} learned",x.learned,x.total)}</span></div>${bar(pct(x.learned,x.total),pct(x.mastered,x.total))}</div>`).join("")}
-    <h4>${t("Study methods")}</h4>${mt?Object.entries(md).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<div class="mrow"><span>${t(k=="game"?"Play":(MODE_LABEL[k]||k))}</span>${bar(pct(n,mt),pct(n,mt))}<b>${pct(n,mt)}%</b></div>`).join(""):`<p class="hint">-</p>`}
+    ${dk.map(x=>`<div class="dsec"><div class="dt"><b>${esc(x.deck)}</b><span>${t("{0} of {1} learned",x.learned,x.total)} · ${pct(x.mastered,x.total)}% ${t("Mastered").toLowerCase()}</span></div>${bar(pct(x.learned,x.total),pct(x.mastered,x.total))}<div class="mm">${mrows(x.modes)}</div></div>`).join("")}
+    <p class="hint" style="margin:6px 0 0;font-size:11.5px">${t("Share of answers · accuracy")}</p>
+    <h4>${t("Study methods")}</h4>${mrows(sum.modes)}
     <div class="row"><button class="ghost sm" data-rms="${m.student_id}">${t("Remove")}</button></div></div></details>`}).join("");
 }
 window.clsView=()=>{
