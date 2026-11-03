@@ -78,3 +78,8 @@ Object.assign(I18N.vi,{"Copy the words and progress from this device (guest) int
 Object.assign(I18N.id,{"Copy the words and progress from this device (guest) into your new account?":"Salin kata dan progres dari perangkat ini (tamu) ke akun barumu?","Resets every Sunday at midnight (00:00, WIB). Time left: {0}":"Direset setiap Minggu malam pukul 00.00 (WIB). Sisa waktu: {0}"});
 Object.assign(I18N.ru,{"Copy the words and progress from this device (guest) into your new account?":"Скопировать слова и прогресс с этого устройства (гость) в новый аккаунт?","Resets every Sunday at midnight (00:00, WIB). Time left: {0}":"Сброс каждое воскресенье в полночь (00:00, WIB). Осталось: {0}"});
 Object.assign(I18N.zh,{"Copy the words and progress from this device (guest) into your new account?":"要把本设备（访客）上的词语和进度复制到新账号吗？","Resets every Sunday at midnight (00:00, WIB). Time left: {0}":"每周日午夜 00:00（WIB）重置，剩余：{0}"});
+
+Object.assign(I18N.vi,{"No activity yet.":"Chưa có hoạt động.","Share of answers · accuracy":"Tỷ lệ câu trả lời · độ chính xác"});
+Object.assign(I18N.id,{"No activity yet.":"Belum ada aktivitas.","Share of answers · accuracy":"Porsi jawaban · akurasi"});
+Object.assign(I18N.ru,{"No activity yet.":"Пока нет активности.","Share of answers · accuracy":"Доля ответов · точность"});
+Object.assign(I18N.zh,{"No activity yet.":"暂无学习记录。","Share of answers · accuracy":"作答占比 · 正确率"});
