@@ -258,6 +258,7 @@ button.ghost,.tile,.opt,.tab,.link,.pfb{box-shadow:none}
 #sheet{display:none}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23d81e1e%22/%3E%3Ctext x=%2232%22 y=%2244%22 font-size=%2238%22 text-anchor=%22middle%22 fill=%22white%22%3E中%3C/text%3E%3C/svg%3E'>
 </head>
 <body>
 <div id="app"></div>
@@ -283,13 +284,13 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const CJK=/[\u3400-\u9fff]/;
 const MAX_MISS=5; // practice mode: up to this many wrong strokes per word still counts as correct
-const SAMPLE="# Lesson 1 - Greetings\n你好 | nǐ hǎo | hello\n谢谢 | xièxie | thank you\n再见 | zàijiàn | goodbye\n对不起 | duìbuqǐ | sorry\n# Lesson 2 - Campus\n图书馆 | túshūguǎn | library\n学生 | xuésheng | student\n老师 | lǎoshī | teacher\n教室 | jiàoshì | classroom\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese\n[S] 老师 在 教室 里 | lǎoshī zài jiàoshì lǐ | The teacher is in the classroom";
+const SAMPLE="# Lesson 1 - Greetings\nÃ¤Â½Â Ã¥Â¥Â½ | nÃ‡Â hÃ‡ÂŽo | hello\nÃ¨Â°Â¢Ã¨Â°Â¢ | xiÃƒÂ¨xie | thank you\nÃ¥Â†ÂÃ¨Â§Â | zÃƒÂ ijiÃƒÂ n | goodbye\nÃ¥Â¯Â¹Ã¤Â¸ÂÃ¨ÂµÂ· | duÃƒÂ¬buqÃ‡Â | sorry\n# Lesson 2 - Campus\nÃ¥Â›Â¾Ã¤Â¹Â¦Ã©Â¦Â† | tÃƒÂºshÃ…Â«guÃ‡ÂŽn | library\nÃ¥Â­Â¦Ã§Â”ÂŸ | xuÃƒÂ©sheng | student\nÃ¨Â€ÂÃ¥Â¸Âˆ | lÃ‡ÂŽoshÃ„Â« | teacher\nÃ¦Â•Â™Ã¥Â®Â¤ | jiÃƒÂ oshÃƒÂ¬ | classroom\n[S] Ã¦ÂˆÂ‘ Ã¥Â–ÂœÃ¦Â¬Â¢ Ã¥Â­Â¦ Ã¤Â¸Â­Ã¦Â–Â‡ | wÃ‡Â’ xÃ‡Âhuan xuÃƒÂ© zhÃ…ÂngwÃƒÂ©n | I like studying Chinese\n[S] Ã¨Â€ÂÃ¥Â¸Âˆ Ã¥ÂœÂ¨ Ã¦Â•Â™Ã¥Â®Â¤ Ã©Â‡ÂŒ | lÃ‡ÂŽoshÃ„Â« zÃƒÂ i jiÃƒÂ oshÃƒÂ¬ lÃ‡Â | The teacher is in the classroom";
 let deck=[],sents=[],arch={deck:[],sents:[]},sel=new Set(),R;
 const save=()=>{try{localStorage.setItem(K("hz-deck"),JSON.stringify({deck,sents,arch,sel:[...sel]}))}catch(e){}if(window.xChanged)xChanged()};
 function bindAdjust(key,min,max){
   const wg=$("#wg"),lk=$("#lk"),gp=$("#gp");if(!wg||!lk||!gp)return;
   let locked=true,y0=0,o0=0,drag=false;
-  const apply=()=>{wg.style.transform=`translateY(${SET[key]||0}px)`;lk.textContent=locked?"🔒":"🔓";gp.classList.toggle("off",locked)};
+  const apply=()=>{wg.style.transform=`translateY(${SET[key]||0}px)`;lk.textContent=locked?"Ã°ÂŸÂ”Â’":"Ã°ÂŸÂ”Â“";gp.classList.toggle("off",locked)};
   apply();
   lk.onclick=ev=>{ev.stopPropagation();locked=!locked;apply()};
   gp.onpointerdown=ev=>{if(locked)return;drag=true;y0=ev.clientY;o0=SET[key]||0;try{gp.setPointerCapture(ev.pointerId)}catch(x){}ev.preventDefault()};
@@ -298,7 +299,7 @@ function bindAdjust(key,min,max){
 }
 function feedback(ok,w,after){
   const o=document.createElement("div");o.className="fbk "+(ok?"ok":"bad");
-  o.innerHTML=`<div class="fbk-in"><div class="ic">${ok?"✓":"✗"}</div><div class="tt">${t(ok?"Correct":"Not this time")}</div><div class="ii"><span class="hz-s">${esc(w.h)}</span> ${esc(w.p)} · ${esc(w.m)}</div></div>`;
+  o.innerHTML=`<div class="fbk-in"><div class="ic">${ok?"Ã¢ÂœÂ“":"Ã¢ÂœÂ—"}</div><div class="tt">${t(ok?"Correct":"Not this time")}</div><div class="ii"><span class="hz-s">${esc(w.h)}</span> ${esc(w.p)} Ã‚Â· ${esc(w.m)}</div></div>`;
   document.body.append(o);
   let d=0,id;const go=()=>{if(d)return;d=1;clearTimeout(id);o.remove();after()};
   id=setTimeout(go,ok?900:1800);o.onclick=go;
@@ -335,16 +336,16 @@ async function boot(){
   if(user&&window.xPull)xPull();
 }
 let authTab="in";
-const THEMES=[["auto","Auto"],["sakura","🌸 Sakura"],["matcha","🍵 Matcha"],["ocean","🌊 Ocean"],["sunset","🌇 Sunset"],["midnight","🌌 Midnight"]];
+const THEMES=[["auto","Auto"],["sakura","Ã°ÂŸÂŒÂ¸ Sakura"],["matcha","Ã°ÂŸÂÂµ Matcha"],["ocean","Ã°ÂŸÂŒÂŠ Ocean"],["sunset","Ã°ÂŸÂŒÂ‡ Sunset"],["midnight","Ã°ÂŸÂŒÂŒ Midnight"]];
 let THEME="auto";try{THEME=localStorage.getItem("zw-theme")||"auto"}catch(x){}
 const setTheme=v=>{THEME=v;try{localStorage.setItem("zw-theme",v)}catch(x){}if(v=="auto")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=v};
 function langSel(){return `<span class="sels"><select id="th" aria-label="Theme">${THEMES.map(([c,n])=>`<option value="${c}" ${c==THEME?"selected":""}>${n}</option>`).join("")}</select><select id="lg" aria-label="Language">${LANGS.map(([c,n])=>`<option value="${c}" ${c==LANG?"selected":""}>${n}</option>`).join("")}</select></span>`}
 function bindLang(){const h=$("#th");if(h)h.onchange=()=>setTheme(h.value);const e=$("#lg");if(e)e.onchange=()=>{LANG=e.value;try{localStorage.setItem("zw-lang",LANG)}catch(x){}document.documentElement.lang=LANG;route()}}
-const feats=()=>[["词",t("Your own word lists"),t("Upload a TXT file with hanzi, pinyin and meanings in any language.")],["听",t("Dictation"),t("Hear it, write on paper")],["写",t("Write on screen"),t("Draw each stroke")],["选",t("Meaning quiz"),t("Pick, then confirm")],["忆",t("Flashcards"),t("Swipe right if you know it, left if not")],["猜",t("Listen & guess"),t("Hear it, then pick the answer")],["排",t("Arrange sentence"),t("Put words in order")],["赛",t("Live rooms"),t("Host a room code and compete with classmates on speed and accuracy.")]];
+const feats=()=>[["Ã¨Â¯Â",t("Your own word lists"),t("Upload a TXT file with hanzi, pinyin and meanings in any language.")],["Ã¥ÂÂ¬",t("Dictation"),t("Hear it, write on paper")],["Ã¥Â†Â™",t("Write on screen"),t("Draw each stroke")],["Ã©Â€Â‰",t("Meaning quiz"),t("Pick, then confirm")],["Ã¥Â¿Â†",t("Flashcards"),t("Swipe right if you know it, left if not")],["Ã§ÂŒÂœ",t("Listen & guess"),t("Hear it, then pick the answer")],["Ã¦ÂŽÂ’",t("Arrange sentence"),t("Put words in order")],["Ã¨ÂµÂ›",t("Live rooms"),t("Host a room code and compete with classmates on speed and accuracy.")]];
 function login(){
   onLogin=true;const up=authTab=="up";const intro=window._intro?"":"intro";window._intro=true;
   app.innerHTML=`<header class="top lhead">${langSel()}</header>
-  <main class="gate ${intro}"><section class="hero"><div class="lockup" role="img" aria-label="Zhongwenfy"><span class="lk-seal">中</span><span class="lk-name"><b>Zhongwenfy</b></span></div><p class="lk-slogan"><span>${t("Write it.")}</span> <span>${t("Remember it.")}</span> <span>${t("Master it.")}</span></p><p class="lk-tag">${t("Learn to write hanzi from your own word lists")}</p></section>
+  <main class="gate ${intro}"><section class="hero"><div class="lockup" role="img" aria-label="Zhongwenfy"><span class="lk-seal">Ã¤Â¸Â­</span><span class="lk-name"><b>Zhongwenfy</b></span></div><p class="lk-slogan"><span>${t("Write it.")}</span> <span>${t("Remember it.")}</span> <span>${t("Master it.")}</span></p><p class="lk-tag">${t("Learn to write hanzi from your own word lists")}</p></section>
   <section class="card auth"><div class="tabs"><button class="tab ${up?"":"on"}" data-tab="in">${t("Sign in")}</button><button class="tab ${up?"on":""}" data-tab="up">${t("Create account")}</button></div>
   <form id="af" novalidate>
   <label>${t("Email")}<input id="ae" type="email" autocomplete="email"></label>
@@ -380,7 +381,7 @@ function login(){
 const uname=()=>(user&&user.user_metadata&&user.user_metadata.username)||"";
 const NAMEOK=/^[\p{L}\p{N}_ .-]{2,14}$/u;
 function nameSetup(){
-  app.innerHTML=`<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div>${langSel()}</header>
+  app.innerHTML=`<header class="top"><div class="brand"><span class="seal">Ã¤Â¸Â­</span><b>Zhongwenfy</b></div>${langSel()}</header>
   <section class="card"><h2>${t("Choose a username")}</h2><p class="hint">${t("This name appears in game rooms and on the leaderboard. You only need to do this once.")}</p>
   <form id="nf" novalidate><label style="display:grid;gap:4px;margin-top:14px;font-weight:700;font-size:14px">${t("Username")}<input id="un" maxlength="14" autocomplete="nickname"></label>
   <div id="ne" role="alert" style="color:var(--bad);font-size:13.5px;min-height:1.3em;margin-top:6px"></div>
@@ -412,7 +413,7 @@ function bindSettings(){
   const q=$("#sq");if(q)q.onchange=ev=>{SET.qpy=ev.target.checked;saveSet()};
   const f=$("#sf");if(f)f.onchange=ev=>{SET.fpy=ev.target.checked;saveSet()};
   const a=$("#sa");if(a)a.onchange=ev=>{SET.auto=ev.target.checked;saveSet()};
-  const sp=$("#sp");if(sp)sp.onchange=ev=>{SET.speed=ev.target.value;saveSet();say("你好")};
+  const sp=$("#sp");if(sp)sp.onchange=ev=>{SET.speed=ev.target.value;saveSet();say("Ã¤Â½Â Ã¥Â¥Â½")};
 }
 async function setPhoto(file){
   const m=$("#pme");
@@ -499,7 +500,7 @@ function lis(w){
   }
   if(mode=="mean")opts=shuf([w,...uniq(shuf(allWords()),"m",w.m)]);
   let pick=-1;const hz=mode=="hanzi";
-  frame(`<div class="mid"><button class="listenbig" id="lsn"><span>🔊</span><b>${t("Tap to listen")}</b></button></div>
+  frame(`<div class="mid"><button class="listenbig" id="lsn"><span>Ã°ÂŸÂ”ÂŠ</span><b>${t("Tap to listen")}</b></button></div>
   <div id="lq" hidden><p class="mn">${t(hz?"Which hanzi did you hear?":"What does it mean?")}</p>
   <div class="opts">${opts.map((x,i)=>`<button class="opt${hz?" hzopt":""}" data-i="${i}">${esc(hz?x.h:x.m)}</button>`).join("")}</div>
   <div class="row"><button id="cf" disabled>${t("Confirm answer")}</button></div></div>`);
@@ -514,7 +515,7 @@ function lis(w){
 
 function quickJoin(){
   const code=new URLSearchParams(location.search).get("room"),saved=(()=>{try{return localStorage.getItem("zw-gname")||""}catch(e){return ""}})();
-  app.innerHTML=`<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div>${langSel()}</header>
+  app.innerHTML=`<header class="top"><div class="brand"><span class="seal">Ã¤Â¸Â­</span><b>Zhongwenfy</b></div>${langSel()}</header>
   <section class="card q"><h2>${t("You were invited to a game")}</h2><p class="hint">${t("Room code")}</p><div class="code">${esc(code)}</div>
   <form id="qj" novalidate><label style="display:grid;gap:4px;margin-top:10px;font-weight:700;font-size:14px;text-align:left">${t("Enter a username to play")}<input id="qn" maxlength="14" autocomplete="nickname" value="${esc(displayName()||saved)}"></label>
   <div id="qe" role="alert" style="color:var(--bad);font-size:13.5px;min-height:1.3em;margin-top:6px"></div>
@@ -571,14 +572,14 @@ window.myAvatar=myAv;
 function avHTML(url,name,cls){
   return url?`<img class="av2 ${cls||""}" src="${esc(url)}" alt="" referrerpolicy="no-referrer">`:`<span class="av2 ${cls||""}" style="background:${avColor(name||"?")}">${esc(((name||"?").trim()[0]||"?").toUpperCase())}</span>`;
 }
-const TABS=[["home","家","Home"],["learn","学","Learn"],["words","词","Words"],["play","玩","Play"],["me","我","Profile"]];
+const TABS=[["home","Ã¥Â®Â¶","Home"],["learn","Ã¥Â­Â¦","Learn"],["words","Ã¨Â¯Â","Words"],["play","Ã§ÂŽÂ©","Play"],["me","Ã¦ÂˆÂ‘","Profile"]];
 function dock(){
   return `<nav class="dock" aria-label="Main">${TABS.map(([k,g,l])=>`<button class="dk${TAB==k||(k=="learn"&&TAB=="class")?" on":""}" data-tab2="${k}"${TAB==k?' aria-current="page"':""}><i>${g}</i><span>${t(l)}</span></button>`).join("")}</nav><div class="dockpad"></div>`;
 }
 function bindDock(){app.querySelectorAll("[data-tab2]").forEach(b=>b.onclick=()=>{TAB=b.dataset.tab2;window.scrollTo(0,0);home()})}
 function topbar(){
   const nm=uname()||(guest?t("Guest"):"");
-  return `<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div><div class="topr"><button class="helpb" id="gd" aria-label="${t("Guide")}">?</button><button class="pfb" id="pf" aria-label="${t("Profile")}">${avHTML(myAv(),nm)}</button></div></header>`;
+  return `<header class="top"><div class="brand"><span class="seal">Ã¤Â¸Â­</span><b>Zhongwenfy</b></div><div class="topr"><button class="helpb" id="gd" aria-label="${t("Guide")}">?</button><button class="pfb" id="pf" aria-label="${t("Profile")}">${avHTML(myAv(),nm)}</button></div></header>`;
 }
 function bindTop(){const p=$("#pf");if(p)p.onclick=()=>{TAB="me";window.scrollTo(0,0);home()}}
 
@@ -601,9 +602,9 @@ function contCard(){
   const s=getJ(SKEY),L=getJ(LKEY);
   if(s){
     const total=s.kind=="flash"?(s.q0||[]).length:(s.q||[]).length,done=s.kind=="flash"?(s.seen||[]).length:s.i;
-    return `<section class="card c-cont"><h2>${t("Continue where you left off")}</h2><p class="hint" style="margin:0 0 4px">${esc((s.ds||[]).join(", "))}</p><p class="hint" style="margin:0"><b>${t(MODE_LABEL[s.mode]||"")}</b> · ${t("{0} of {1} done",done,total)}</p><div class="row"><button id="cres">${t("Continue")}</button><button class="ghost" id="cdis">${t("Discard")}</button></div></section>`;
+    return `<section class="card c-cont"><h2>${t("Continue where you left off")}</h2><p class="hint" style="margin:0 0 4px">${esc((s.ds||[]).join(", "))}</p><p class="hint" style="margin:0"><b>${t(MODE_LABEL[s.mode]||"")}</b> Ã‚Â· ${t("{0} of {1} done",done,total)}</p><div class="row"><button id="cres">${t("Continue")}</button><button class="ghost" id="cdis">${t("Discard")}</button></div></section>`;
   }
-  if(L&&L.q&&L.q.length)return `<section class="card c-cont"><h2>${t("Repeat last session")}</h2><p class="hint" style="margin:0 0 4px">${esc((L.ds||[]).join(", "))}</p><p class="hint" style="margin:0"><b>${t(MODE_LABEL[L.mode]||"")}</b> · ${L.q.length}</p><div class="row"><button class="ghost" id="crep">${t("Repeat session")}</button></div></section>`;
+  if(L&&L.q&&L.q.length)return `<section class="card c-cont"><h2>${t("Repeat last session")}</h2><p class="hint" style="margin:0 0 4px">${esc((L.ds||[]).join(", "))}</p><p class="hint" style="margin:0"><b>${t(MODE_LABEL[L.mode]||"")}</b> Ã‚Â· ${L.q.length}</p><div class="row"><button class="ghost" id="crep">${t("Repeat session")}</button></div></section>`;
   return "";
 }
 
@@ -615,7 +616,7 @@ function lessonRows(){
   return [...map.values()].map(r=>({...r,pct:r.w?Math.round(r.m/r.w*100):0}));
 }
 function deckList(kind,checked,attr){
-  return lessonRows().filter(r=>kind=="sents"?r.s>0:kind=="words"?r.w>0:true).map(r=>`<label class="ls drow" data-n="${esc(r.l.toLowerCase())}"><input type="checkbox" ${attr}="${esc(r.l)}" ${checked.has(r.l)?"checked":""}><span class="dn">${esc(r.l)}${r.arc&&!r.act?`<em class="tag">${t("Archive")}</em>`:""}${r.cls?`<em class="tag">${t("Class")}</em>`:""}</span><span class="hint dm">${t("{0} words, {1} sentences",r.w,r.s)}${r.w?" · "+t("{0}% memorized",r.pct):""}</span>${r.w?`<div class="mbar"><i style="width:${r.pct}%"></i></div>`:""}</label>`).join("");
+  return lessonRows().filter(r=>kind=="sents"?r.s>0:kind=="words"?r.w>0:true).map(r=>`<label class="ls drow" data-n="${esc(r.l.toLowerCase())}"><input type="checkbox" ${attr}="${esc(r.l)}" ${checked.has(r.l)?"checked":""}><span class="dn">${esc(r.l)}${r.arc&&!r.act?`<em class="tag">${t("Archive")}</em>`:""}${r.cls?`<em class="tag">${t("Class")}</em>`:""}</span><span class="hint dm">${t("{0} words, {1} sentences",r.w,r.s)}${r.w?" Ã‚Â· "+t("{0}% memorized",r.pct):""}</span>${r.w?`<div class="mbar"><i style="width:${r.pct}%"></i></div>`:""}</label>`).join("");
 }
 function bindDeckTools(){
   const rows=()=>[...app.querySelectorAll(".drow")];
@@ -657,17 +658,17 @@ function home(){
   const has=allWords().length||allSents().length,active=deck.length||sents.length;
   const empty=`<section class="card"><h2>${t("Start with a word list")}</h2><p class="hint">${t("Add your vocabulary in the Words tab, or try the sample to look around.")}</p><div class="row"><button id="sample">${t("Try a sample")}</button><button class="ghost" id="gowords">${t("Words")}</button></div></section>`;
   const tiles=`<section class="card c-prac"><h2>${t("Practise")}</h2><div class="tiles">
-  <button class="tile" data-m="dict"><i>听</i><b>${t("Dictation")}</b><span>${t("Hear it, write on paper")}</span></button>
-  <button class="tile" data-m="write"><i>写</i><b>${t("Write on screen")}</b><span>${t("Draw each stroke")}</span></button>
-  <button class="tile" data-m="quiz"><i>选</i><b>${t("Meaning quiz")}</b><span>${t("Pick, then confirm")}</span></button>
-  <button class="tile" data-m="flash"><i>忆</i><b>${t("Flashcards")}</b><span>${t("Swipe right if you know it, left if not")}</span></button>
-  <button class="tile" data-m="lis"><i>猜</i><b>${t("Listen & guess")}</b><span>${t("Hear it, then pick the answer")}</span></button>
-  <button class="tile" data-m="arr"><i>排</i><b>${t("Arrange sentence")}</b><span>${t("Put words in order")}</span></button></div></section>`;
+  <button class="tile" data-m="dict"><i>Ã¥ÂÂ¬</i><b>${t("Dictation")}</b><span>${t("Hear it, write on paper")}</span></button>
+  <button class="tile" data-m="write"><i>Ã¥Â†Â™</i><b>${t("Write on screen")}</b><span>${t("Draw each stroke")}</span></button>
+  <button class="tile" data-m="quiz"><i>Ã©Â€Â‰</i><b>${t("Meaning quiz")}</b><span>${t("Pick, then confirm")}</span></button>
+  <button class="tile" data-m="flash"><i>Ã¥Â¿Â†</i><b>${t("Flashcards")}</b><span>${t("Swipe right if you know it, left if not")}</span></button>
+  <button class="tile" data-m="lis"><i>Ã§ÂŒÂœ</i><b>${t("Listen & guess")}</b><span>${t("Hear it, then pick the answer")}</span></button>
+  <button class="tile" data-m="arr"><i>Ã¦ÂŽÂ’</i><b>${t("Arrange sentence")}</b><span>${t("Put words in order")}</span></button></div></section>`;
   const words=`${window.xShare?xShare():""}<div class="col2"><section class="card c-words"><h2>${t("Your word list")}</h2><p class="hint" style="margin:0">${t("Paste your class vocabulary or open a TXT file.")}</p>
-  <textarea id="txt" rows="7" placeholder="# Lesson 1&#10;你好 | nǐ hǎo | hello"></textarea>
+  <textarea id="txt" rows="7" placeholder="# Lesson 1&#10;Ã¤Â½Â Ã¥Â¥Â½ | nÃ‡Â hÃ‡ÂŽo | hello"></textarea>
   <div class="row"><input type="file" id="file" accept=".txt,text/plain"><button id="load">${t("Load words")}</button><button class="ghost" id="sample">${t("Try a sample")}</button>${active?`<button class="ghost" id="clr">${t("Archive list")}</button>`:""}</div>
   <div id="msg" aria-live="polite"></div>
-  <details><summary>${t("File format")}</summary><pre># Lesson title (optional)\nhanzi | pinyin | meaning\n你好 | nǐ hǎo | hello\n[S] 我 喜欢 学 中文 | wǒ xǐhuan xué zhōngwén | I like studying Chinese</pre><p class="hint">One word per line. Separate with | or a tab. Write the meaning in any language you like. Lines starting with [S] are sentences for the arrange game: put spaces between the words.</p></details></section></div><div class="col2">${archCard()}</div>`;
+  <details><summary>${t("File format")}</summary><pre># Lesson title (optional)\nhanzi | pinyin | meaning\nÃ¤Â½Â Ã¥Â¥Â½ | nÃ‡Â hÃ‡ÂŽo | hello\n[S] Ã¦ÂˆÂ‘ Ã¥Â–ÂœÃ¦Â¬Â¢ Ã¥Â­Â¦ Ã¤Â¸Â­Ã¦Â–Â‡ | wÃ‡Â’ xÃ‡Âhuan xuÃƒÂ© zhÃ…ÂngwÃƒÂ©n | I like studying Chinese</pre><p class="hint">One word per line. Separate with | or a tab. Write the meaning in any language you like. Lines starting with [S] are sentences for the arrange game: put spaces between the words.</p></details></section></div><div class="col2">${archCard()}</div>`;
   const body=TAB=="home"?`${window.guideHome?guideHome():""}${window.xStreak?xStreak():""}${window.xToday?xToday():""}${contCard()}${window.clsHome?clsHome():""}${has?"":empty}${window.xBoard?xBoard():""}`:TAB=="learn"?`${has?tiles:empty}${window.clsLearn?clsLearn():""}`:TAB=="class"?(window.clsView?clsView():""):TAB=="words"?words:(window.mpCard?mpCard():"");
   app.innerHTML=`${topbar()}<div class="view v-${TAB}">${body}</div>${dock()}`;
   const load=txt=>{const{out,bad,sent}=parse(txt);const m=$("#msg");
@@ -716,7 +717,7 @@ function dict(w){
 
 function write(w){
   const chars=[...w.h].filter(c=>CJK.test(c)),cols=Math.min(chars.length||1,chars.length>4?3:2),sz=Math.max(90,Math.min(innerWidth>=900?300:220,Math.floor((Math.min(innerWidth,innerWidth>=900?900:640)-(innerWidth>=900?120:72)-10*(cols-1))/cols)));
-  frame(`<p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><div class="mid"><div id="wg"><div class="adj"><button class="ghost sm lockb" id="lk"></button><span class="grip" id="gp">⇅</span></div><div class="boxes" id="bx"></div></div></div><p id="st" class="hint">${t("Write each stroke. Up to {0} wrong strokes still count as correct; giving up counts as wrong.",MAX_MISS)}</p><div class="row" id="ctl"><button class="ghost" id="ls">${t("Listen")}</button><button class="ghost" id="hn">${t("Hint")}</button><button class="ghost" id="sa">${t("Show answer")}</button></div>`);
+  frame(`<p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><div class="mid"><div id="wg"><div class="adj"><button class="ghost sm lockb" id="lk"></button><span class="grip" id="gp">Ã¢Â‡Â…</span></div><div class="boxes" id="bx"></div></div></div><p id="st" class="hint">${t("Write each stroke. Up to {0} wrong strokes still count as correct; giving up counts as wrong.",MAX_MISS)}</p><div class="row" id="ctl"><button class="ghost" id="ls">${t("Listen")}</button><button class="ghost" id="hn">${t("Hint")}</button><button class="ghost" id="sa">${t("Show answer")}</button></div>`);
   $("#ls").onclick=()=>say(w.h);bindAdjust("wy",-260,260);
   let miss=0,fbk=false,W=[];
   const fallback=()=>{if(fbk)return;fbk=true;$("#bx").innerHTML="";$("#st").textContent="Stroke data is unavailable for this word, so check yourself on paper.";
@@ -771,8 +772,8 @@ function flash(q0,st){
     if(i>=cards.length)return end();
     fsave();
     const w=cards[i];busy=false;
-    app.innerHTML=`<div class="bar"><button class="ghost" id="quit">${t("Quit")}</button><span>${t("Round {0}",round)} · ${i+1}/${cards.length}</span><div class="prog"><i style="width:${i/cards.length*100}%"></i></div></div>
-    <div class="fcwrap" id="wg"><div class="adj"><button class="ghost sm lockb" id="lk"></button><span class="grip" id="gp">⇅</span></div><div class="fc" id="fc"><div class="fci">
+    app.innerHTML=`<div class="bar"><button class="ghost" id="quit">${t("Quit")}</button><span>${t("Round {0}",round)} Ã‚Â· ${i+1}/${cards.length}</span><div class="prog"><i style="width:${i/cards.length*100}%"></i></div></div>
+    <div class="fcwrap" id="wg"><div class="adj"><button class="ghost sm lockb" id="lk"></button><span class="grip" id="gp">Ã¢Â‡Â…</span></div><div class="fc" id="fc"><div class="fci">
     <div class="face front"><div class="hz">${esc(w.h)}</div>${SET.fpy?`<p class="py">${esc(w.p)}</p>`:""}<button class="ghost sm" id="fl">${t("Listen")}</button><p class="hint" style="margin-top:14px">${t("Tap card to flip")}</p></div>
     <div class="face back"><p class="py">${esc(w.p)}</p><p class="mn">${esc(w.m)}</p><button class="ghost sm" id="fl2">${t("Listen")}</button></div></div>
     <div class="stamp l">${t("Not memorized yet")}</div><div class="stamp r">${t("Memorized")}</div></div>
@@ -825,3 +826,4 @@ boot();
 </script>
 </body>
 </html>
+
