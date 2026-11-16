@@ -276,6 +276,7 @@ a.tile.wb-btn{display:block;text-decoration:none;--tc:#f59e0b}
 <script src="multiplayer.js"></script>
 <script src="extras.js"></script>
 <script src="classroom.js"></script>
+<script src="notify.js"></script>
 <script src="guide.js"></script>
 <script>
 // Used by the multiplayer rooms (next step). The publishable key is safe to keep in client code.
@@ -394,7 +395,7 @@ function nameSetup(){
   <div id="ne" role="alert" style="color:var(--bad);font-size:13.5px;min-height:1.3em;margin-top:6px"></div>
   <div class="row"><button type="submit" id="ns">${t("Save")}</button><button type="button" class="ghost" id="no">${t("Sign out")}</button></div></form></section>`;
   bindLang();
-  $("#no").onclick=async()=>{setGuest(false);await SB.auth.signOut()};
+  $("#no").onclick=async()=>{setGuest(false);if(window.ntOut)await ntOut();await SB.auth.signOut()};
   $("#nf").onsubmit=async e=>{
     e.preventDefault();const v=$("#un").value.trim();
     if(!NAMEOK.test(v)){$("#ne").textContent=t("Use 2 to 14 letters, numbers, spaces, or _ . -");return}
@@ -474,7 +475,7 @@ function profile(){
   $("#pfile").onchange=ev=>{const f=ev.target.files[0];if(f)setPhoto(f)};
   if($("#rmv"))$("#rmv").onclick=delPhoto;
   $("#exp").onclick=exportData;$("#dacc").onclick=delAccount;
-  $("#po").onclick=async()=>{setGuest(false);await SB.auth.signOut()};
+  $("#po").onclick=async()=>{setGuest(false);if(window.ntOut)await ntOut();await SB.auth.signOut()};
   $("#uf").onsubmit=async ev=>{
     ev.preventDefault();const v=$("#un").value.trim(),m=$("#ue");
     if(!NAMEOK.test(v)){m.textContent=t("Use 2 to 14 letters, numbers, spaces, or _ . -");return}
@@ -587,9 +588,9 @@ function dock(){
 function bindDock(){app.querySelectorAll("[data-tab2]").forEach(b=>b.onclick=()=>{TAB=b.dataset.tab2;window.scrollTo(0,0);home()})}
 function topbar(){
   const nm=uname()||(guest?t("Guest"):"");
-  return `<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div><div class="topr"><button class="helpb" id="gd" aria-label="${t("Guide")}">?</button><button class="pfb" id="pf" aria-label="${t("Profile")}">${avHTML(myAv(),nm)}</button></div></header>`;
+  return `<header class="top"><div class="brand"><span class="seal">中</span><b>Zhongwenfy</b></div><div class="topr">${window.ntBell?ntBell():""}<button class="helpb" id="gd" aria-label="${t("Guide")}">?</button><button class="pfb" id="pf" aria-label="${t("Profile")}">${avHTML(myAv(),nm)}</button></div></header>`;
 }
-function bindTop(){const p=$("#pf");if(p)p.onclick=()=>{TAB="me";window.scrollTo(0,0);home()}}
+function bindTop(){const p=$("#pf");if(p)p.onclick=()=>{TAB="me";window.scrollTo(0,0);home()};if(window.ntTop)ntTop()}
 
 /* ---- sessions: resume and repeat ---- */
 const SKEY="zw-session",LKEY="zw-last";
