@@ -1,6 +1,6 @@
 (()=>{
 // GANTI dengan VAPID public key milikmu (hasil: npx web-push generate-vapid-keys)
-const VAPID_PUBLIC="sb_publishable_B-rFzGRvOOMxHwfjQ5q_ew_nOqstjJN";
+const VAPID_PUBLIC="BO12G547OHdFC0X59q0mW_MLkPREeBtm6iZ4ngQtOWoIIClxaOCCA-ULM_80HPsLdQ4ne0m3wBQCT8UlPxiB9Is";
 
 /* terjemahan (self-contained, i18n.js tidak perlu diubah) */
 const TR={
