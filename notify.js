@@ -4,10 +4,10 @@ const VAPID_PUBLIC="BO12G547OHdFC0X59q0mW_MLkPREeBtm6iZ4ngQtOWoIIClxaOCCA-ULM_80
 
 /* terjemahan (self-contained, i18n.js tidak perlu diubah) */
 const TR={
-id:{"Notifications":"Notifikasi","No notifications yet.":"Belum ada notifikasi.","New deck added":"Dek baru ditambahkan","Message from your teacher":"Pesan dari laoshi","Enable device notifications":"Aktifkan notifikasi perangkat","Device notifications are on":"Notifikasi perangkat aktif","Turn off":"Matikan","Device notifications are blocked. Allow them in your browser settings.":"Notifikasi perangkat diblokir. Izinkan lewat pengaturan browser.","Not supported here. On iPhone, add the app to your Home Screen first.":"Tidak didukung di sini. Di iPhone, tambahkan aplikasi ke Layar Utama dulu.","Send alert":"Kirim peringatan","Title (optional)":"Judul (opsional)","Message":"Pesan","Send":"Kirim","Choose students and write a message.":"Pilih murid dan tulis pesan.","Sent to {0} students":"Terkirim ke {0} murid"},
-vi:{"Notifications":"Thông báo","No notifications yet.":"Chưa có thông báo.","New deck added":"Đã thêm bộ từ mới","Message from your teacher":"Tin nhắn từ laoshi","Enable device notifications":"Bật thông báo trên thiết bị","Device notifications are on":"Thông báo trên thiết bị đang bật","Turn off":"Tắt","Device notifications are blocked. Allow them in your browser settings.":"Thông báo trên thiết bị đang bị chặn. Hãy cho phép trong cài đặt trình duyệt.","Not supported here. On iPhone, add the app to your Home Screen first.":"Không được hỗ trợ ở đây. Trên iPhone, hãy thêm ứng dụng vào Màn hình chính trước.","Send alert":"Gửi thông báo","Title (optional)":"Tiêu đề (không bắt buộc)","Message":"Nội dung","Send":"Gửi","Choose students and write a message.":"Hãy chọn học sinh và viết nội dung.","Sent to {0} students":"Đã gửi cho {0} học sinh"},
-ru:{"Notifications":"Уведомления","No notifications yet.":"Уведомлений пока нет.","New deck added":"Добавлена новая колода","Message from your teacher":"Сообщение от учителя","Enable device notifications":"Включить уведомления на устройстве","Device notifications are on":"Уведомления на устройстве включены","Turn off":"Выключить","Device notifications are blocked. Allow them in your browser settings.":"Уведомления на устройстве заблокированы. Разрешите их в настройках браузера.","Not supported here. On iPhone, add the app to your Home Screen first.":"Здесь не поддерживается. На iPhone сначала добавьте приложение на экран «Домой».","Send alert":"Отправить уведомление","Title (optional)":"Заголовок (необязательно)","Message":"Сообщение","Send":"Отправить","Choose students and write a message.":"Выберите учеников и напишите сообщение.","Sent to {0} students":"Отправлено ученикам: {0}"},
-zh:{"Notifications":"通知","No notifications yet.":"暂无通知。","New deck added":"新增了词库","Message from your teacher":"来自老师的消息","Enable device notifications":"开启设备通知","Device notifications are on":"设备通知已开启","Turn off":"关闭","Device notifications are blocked. Allow them in your browser settings.":"设备通知已被阻止，请在浏览器设置中允许。","Not supported here. On iPhone, add the app to your Home Screen first.":"此处不支持。在 iPhone 上请先把应用添加到主屏幕。","Send alert":"发送提醒","Title (optional)":"标题（可选）","Message":"消息","Send":"发送","Choose students and write a message.":"请选择学生并输入消息。","Sent to {0} students":"已发送给 {0} 位学生"}
+id:{"Notifications":"Notifikasi","No notifications yet.":"Belum ada notifikasi.","New deck added":"Dek baru ditambahkan","Message from your teacher":"Pesan dari laoshi","Enable device notifications":"Aktifkan notifikasi perangkat","Device notifications are on":"Notifikasi perangkat aktif","Turn off":"Matikan","Device notifications are blocked. Allow them in your browser settings.":"Notifikasi perangkat diblokir. Izinkan lewat pengaturan browser.","Not supported here. On iPhone, add the app to your Home Screen first.":"Tidak didukung di sini. Di iPhone, tambahkan aplikasi ke Layar Utama dulu.","Send alert":"Kirim peringatan","Title (optional)":"Judul (opsional)","Message":"Pesan","Send":"Kirim","Choose students and write a message.":"Pilih murid dan tulis pesan.","Sent to {0} students":"Terkirim ke {0} murid","Delete all":"Hapus semua","Delete all notifications?":"Hapus semua notifikasi?"},
+vi:{"Notifications":"Thông báo","No notifications yet.":"Chưa có thông báo.","New deck added":"Đã thêm bộ từ mới","Message from your teacher":"Tin nhắn từ laoshi","Enable device notifications":"Bật thông báo trên thiết bị","Device notifications are on":"Thông báo trên thiết bị đang bật","Turn off":"Tắt","Device notifications are blocked. Allow them in your browser settings.":"Thông báo trên thiết bị đang bị chặn. Hãy cho phép trong cài đặt trình duyệt.","Not supported here. On iPhone, add the app to your Home Screen first.":"Không được hỗ trợ ở đây. Trên iPhone, hãy thêm ứng dụng vào Màn hình chính trước.","Send alert":"Gửi thông báo","Title (optional)":"Tiêu đề (không bắt buộc)","Message":"Nội dung","Send":"Gửi","Choose students and write a message.":"Hãy chọn học sinh và viết nội dung.","Sent to {0} students":"Đã gửi cho {0} học sinh","Delete all":"Xóa tất cả","Delete all notifications?":"Xóa tất cả thông báo?"},
+ru:{"Notifications":"Уведомления","No notifications yet.":"Уведомлений пока нет.","New deck added":"Добавлена новая колода","Message from your teacher":"Сообщение от учителя","Enable device notifications":"Включить уведомления на устройстве","Device notifications are on":"Уведомления на устройстве включены","Turn off":"Выключить","Device notifications are blocked. Allow them in your browser settings.":"Уведомления на устройстве заблокированы. Разрешите их в настройках браузера.","Not supported here. On iPhone, add the app to your Home Screen first.":"Здесь не поддерживается. На iPhone сначала добавьте приложение на экран «Домой».","Send alert":"Отправить уведомление","Title (optional)":"Заголовок (необязательно)","Message":"Сообщение","Send":"Отправить","Choose students and write a message.":"Выберите учеников и напишите сообщение.","Sent to {0} students":"Отправлено ученикам: {0}","Delete all":"Удалить все","Delete all notifications?":"Удалить все уведомления?"},
+zh:{"Notifications":"通知","No notifications yet.":"暂无通知。","New deck added":"新增了词库","Message from your teacher":"来自老师的消息","Enable device notifications":"开启设备通知","Device notifications are on":"设备通知已开启","Turn off":"关闭","Device notifications are blocked. Allow them in your browser settings.":"设备通知已被阻止，请在浏览器设置中允许。","Not supported here. On iPhone, add the app to your Home Screen first.":"此处不支持。在 iPhone 上请先把应用添加到主屏幕。","Send alert":"发送提醒","Title (optional)":"标题（可选）","Message":"消息","Send":"发送","Choose students and write a message.":"请选择学生并输入消息。","Sent to {0} students":"已发送给 {0} 位学生","Delete all":"全部删除","Delete all notifications?":"要删除所有通知吗？"}
 };
 if(typeof I18N!="undefined")Object.keys(TR).forEach(l=>{I18N[l]=Object.assign(I18N[l]||{},TR[l])});
 
@@ -15,8 +15,9 @@ const S={uid:null,list:[],ch:null,open:false,hooked:false,fresh:new Set()};
 const st=document.createElement("style");
 st.textContent=`.ntb{position:relative}.ntb svg{display:block;margin:auto}
 .ntd{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:var(--onacc);font:800 11px/18px var(--ui);text-align:center}
-.nti{padding:12px 0;border-bottom:1px solid var(--soft);cursor:pointer}.nti:last-child{border-bottom:0}
-.nti b{display:block}.nti p{margin:2px 0 0}.nti.un{border-left:4px solid var(--red);padding-left:10px}`;
+.nti{display:flex;gap:8px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--soft);cursor:pointer}.nti:last-child{border-bottom:0}
+.nti .ntc{flex:1;min-width:0}.nti b{display:block}.nti p{margin:2px 0 0}.nti.un{border-left:4px solid var(--red);padding-left:10px}
+.ntdel{flex:none;background:transparent;color:var(--mut);border:0;box-shadow:none;min-height:0;padding:4px 10px;font-size:16px;line-height:1.2}.ntdel:hover{color:var(--bad)}`;
 document.head.append(st);
 
 const ok=()=>typeof user!="undefined"&&user&&SB;
@@ -100,6 +101,17 @@ async function off(){
   renderPanel();
 }
 
+function db(q){q.then(r=>{if(r.error)load().then(()=>{if(S.open)renderPanel()})},()=>{})}
+function del(id){
+  S.list=S.list.filter(n=>n.id!==id);refreshBadge();renderPanel();
+  db(SB.from("notifications").delete().eq("id",id));
+}
+function delAll(){
+  if(!S.list.length||!confirm(t("Delete all notifications?")))return;
+  S.list=[];refreshBadge();renderPanel();
+  db(SB.from("notifications").delete().eq("user_id",user.id));
+}
+
 function pushCard(){
   if(!supported())return `<p class="hint">${t("Not supported here. On iPhone, add the app to your Home Screen first.")}</p>`;
   const p=Notification.permission,o=!!getJ("zw-pushoff");
@@ -111,11 +123,14 @@ function renderPanel(){
   const o=$("#ntm");if(!o)return;
   o.innerHTML=`<div class="gbox" role="dialog" aria-modal="true"><div class="gh"><h2>${t("Notifications")}</h2><button class="ghost sm" id="ntx" aria-label="${t("Close")}">✕</button></div>
   <div style="margin:12px 0">${pushCard()}</div>
-  ${S.list.length?S.list.map((n,i)=>{const v=view(n);return `<div class="nti${S.fresh.has(n.id)?" un":""}" data-ni="${i}"><b>${esc(v.h)}</b>${v.b?`<p>${esc(v.b)}</p>`:""}<p class="hint">${v.s?esc(v.s)+" · ":""}${esc(when(n.created_at))}</p></div>`}).join(""):`<p class="hint">${t("No notifications yet.")}</p>`}</div>`;
+  ${S.list.length?`<div class="row" style="margin:0 0 4px;justify-content:flex-end"><button class="ghost sm" id="ntclr">${t("Delete all")}</button></div>`:""}
+  ${S.list.length?S.list.map((n,i)=>{const v=view(n);return `<div class="nti${S.fresh.has(n.id)?" un":""}" data-ni="${i}"><div class="ntc"><b>${esc(v.h)}</b>${v.b?`<p>${esc(v.b)}</p>`:""}<p class="hint">${v.s?esc(v.s)+" · ":""}${esc(when(n.created_at))}</p></div><button class="ntdel" data-nd="${i}" aria-label="${t("Delete")}">✕</button></div>`}).join(""):`<p class="hint">${t("No notifications yet.")}</p>`}</div>`;
   $("#ntx").onclick=closeInbox;
   o.querySelectorAll("[data-ni]").forEach(el=>el.onclick=()=>{
     const n=S.list[+el.dataset.ni],cid=n&&n.payload&&n.payload.class_id;
     if(cid&&window.clsOpen){closeInbox();clsOpen(cid)}});
+  o.querySelectorAll("[data-nd]").forEach(b=>b.onclick=ev=>{ev.stopPropagation();const n=S.list[+b.dataset.nd];if(n)del(n.id)});
+  const ca=$("#ntclr");if(ca)ca.onclick=delAll;
   const e=$("#nte");if(e)e.onclick=enable;
   const f=$("#nto");if(f)f.onclick=off;
 }
