@@ -132,6 +132,15 @@ function studentsHTML(){
     <h4>${t("Study methods")}</h4>${mrows(sum.modes)}
     <div class="row"><button class="ghost sm" data-rms="${m.student_id}">${t("Remove")}</button></div></div></details>`}).join("");
 }
+function alertCard(){
+  const P=CL.panel;
+  if(!P)return "";
+  if(!P.members.length)return `<section class="card cls"><h2>${t("Send alert")}</h2><p class="hint">${t("No students yet.")}</p></section>`;
+  return `<section class="card cls"><h2>${t("Send alert")}</h2><div class="dlist">${P.members.map(m=>`<label class="ls"><input type="checkbox" data-al="${m.student_id}" checked> ${esc((P.prof[m.student_id]||{}).name||"?")}</label>`).join("")}</div>
+  <div class="row" style="margin-top:6px"><button class="ghost sm" id="alall">${t("Select all")}</button><button class="ghost sm" id="alno">${t("Clear")}</button></div>
+  <input id="alt" maxlength="80" placeholder="${t("Title (optional)")}" style="width:100%;margin-top:10px"><textarea id="alb" rows="3" maxlength="500" placeholder="${t("Message")}"></textarea>
+  <div class="row"><button id="als">${t("Send")}</button></div><div id="alm" class="hint" role="status" style="min-height:1.2em"></div></section>`;
+}
 window.clsView=()=>{
   const id=CID,tc=owns(id),c=tc?CL.owned.find(x=>x.id===id):CL.classes.find(x=>x.class_id===id);
   const back=`<div class="wide"><button class="ghost sm" id="clb">${t("Back")}</button></div>`;
@@ -142,6 +151,7 @@ window.clsView=()=>{
     <div class="row"><button class="ghost sm" id="ccp">${t("Copy")}</button><button class="ghost sm" id="cnw">${t("New code")}</button></div>
     <div class="row"><input id="cnm" value="${esc(c.name)}" maxlength="60" aria-label="${t("Class name")}" style="flex:1;min-width:160px"><button class="sm" id="csv">${t("Save")}</button></div></section>
     <section class="card cls"><div class="clshead"><h2>${t("Students")}</h2><button class="ghost sm" id="cre">${t("Refresh")}</button></div>${studentsHTML()}</section>
+    ${alertCard()}
     <section class="card cls"><h2>${t("Class decks")}</h2>${deckRows(id,true)}</section>
     <section class="card cls"><h2>${t("Choose decks")}</h2>${deckTools()}<div class="dlist">${deckList("all",new Set(),"data-cd")}</div><div class="row"><button id="cad">${t("Add selected decks")}</button></div><div id="cadm" class="hint" role="status"></div></section>`;
 };
@@ -168,6 +178,19 @@ function bindClass(){
     if(error){alert(error.message);return}
     await load(true);TAB="learn";home()};
   $("#cre").onclick=()=>loadPanel();
+  if($("#als")){
+    $("#alall").onclick=()=>app.querySelectorAll("[data-al]").forEach(c=>c.checked=true);
+    $("#alno").onclick=()=>app.querySelectorAll("[data-al]").forEach(c=>c.checked=false);
+    $("#als").onclick=async()=>{
+      const ids=[...app.querySelectorAll("[data-al]:checked")].map(c=>c.dataset.al),m=$("#alm"),body=$("#alb").value.trim(),title=$("#alt").value.trim();
+      if(!ids.length||!body){m.textContent=t("Choose students and write a message.");return}
+      const b=$("#als");b.disabled=true;
+      const{data,error}=await SB.rpc("send_class_alert",{p_class_id:String(id),p_student_ids:ids,p_title:title,p_body:body});
+      b.disabled=false;
+      if(error){m.textContent=error.message;return}
+      m.textContent=t("Sent to {0} students",data);$("#alb").value="";$("#alt").value="";
+    };
+  }
   app.querySelectorAll("[data-rmd]").forEach(b=>b.onclick=async()=>{const r=(CL.decks[id]||[])[+b.dataset.rmd];if(!r)return;await SB.from("class_decks").delete().eq("class_id",id).eq("deck",r.deck);await load(true);home()});
   app.querySelectorAll("[data-rms]").forEach(b=>b.onclick=async()=>{
     if(!confirm(t("Remove")+"?"))return;const sid=b.dataset.rms;
@@ -193,6 +216,8 @@ function studyDeck(cid,idx){
     if(!pool.length){alert(m=="arr"?t("Select at least one lesson that has sentences."):t("Select at least one lesson that has words."));return}
     CUR={ds:[r.deck]};pickCount(m,pool)});
 }
+window.clsOpen=openClass;
+window.clsReload=()=>load(true).then(c=>{if(c&&(TAB=="home"||TAB=="learn"||TAB=="class"))home()});
 window.clsBind=()=>{
   if(!ok())return;
   app.querySelectorAll("[data-cls]").forEach(b=>b.onclick=()=>openClass(b.dataset.cls));
