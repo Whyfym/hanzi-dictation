@@ -65,7 +65,8 @@ window.clsLearn=()=>{
   if(typeof user=="undefined"||!user)return `<section class="card cls"><h2>${t("Classroom")}</h2><p class="hint">${t("Sign in to use the classroom.")}</p></section>`;
   return `${rows()}<section class="card cls"><div class="clshead"><h2>${t("Classroom")}</h2><button class="ghost sm" data-guide="c">${t("How the classroom works")}</button></div><div class="row" style="margin-top:6px"><input id="jc" maxlength="6" placeholder="${t("Class code")}" style="width:150px;text-transform:uppercase"><button id="jb">${t("Join a class")}</button></div>${CL.isT?`<div class="row"><input id="ncn" maxlength="60" placeholder="${t("Class name")}" style="flex:1;min-width:150px"><button class="ghost" id="ncb">${t("Create class")}</button></div>`:`<div class="row"><input id="tp" type="password" placeholder="${t("Teacher password")}" style="width:190px" autocomplete="off"><button class="ghost" id="tb">${t("Become a laoshi")}</button></div>`}<div id="clm" class="hint" role="status" style="min-height:1.2em"></div></section>`;
 };
-window.clsData=()=>CL.classes.map(c=>({class_id:c.class_id,decks:CL.decks[c.class_id]||[]}));
+// "words" di sini sengaja berisi kata + kalimat, supaya progres kalimat ikut dihitung oleh classSync (extras.js)
+window.clsData=()=>CL.classes.map(c=>({class_id:c.class_id,decks:(CL.decks[c.class_id]||[]).map(r=>({...r,words:[...(r.words||[]),...(r.sents||[])]}))}));
 
 async function join(){
   const m=$("#clm"),c=($("#jc").value||"").trim().toUpperCase();if(c.length!=6)return;
@@ -104,7 +105,7 @@ function deckRows(cid,manage){
   const rs=CL.decks[cid]||[];
   if(!rs.length)return `<p class="hint">${t("No decks yet.")}</p>`;
   return rs.map((r,i)=>{
-    const ws=r.words||[],s=window.xProgStats?xProgStats(ws):{total:ws.length,learned:0,mastered:0};
+    const ws=r.words||[],all=[...ws,...(r.sents||[])],s=window.xProgStats?xProgStats(all):{total:all.length,learned:0,mastered:0};
     return `<div class="stu"><div class="sh"><span class="sn">${esc(r.deck)}</span><span class="hint">${t("{0} words, {1} sentences",ws.length,(r.sents||[]).length)}</span></div>
     <div class="drw"><div class="dt"><span>${t("{0} of {1} learned",s.learned,s.total)}</span><span>${t("{0}% memorized",pct(s.mastered,s.total))}</span></div><div class="cbar"><i class="l" style="width:${pct(s.learned,s.total)}%"></i><i class="m" style="width:${pct(s.mastered,s.total)}%"></i></div></div>
     <div class="row"><button class="sm" data-study="${i}">${t("Study")}</button>${manage?`<button class="ghost sm" data-rmd="${i}">${t("Remove")}</button>`:""}</div></div>`}).join("");
