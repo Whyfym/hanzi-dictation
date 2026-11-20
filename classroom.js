@@ -17,7 +17,8 @@ st.textContent=`.cls .clshead{display:flex;gap:12px;align-items:center;justify-c
 .stars{display:flex;gap:2px}.stars button{background:transparent;border:0;box-shadow:none;color:var(--line);font-size:28px;line-height:1;padding:2px 4px;min-height:40px;min-width:36px}.stars button.on{color:var(--acc2)}
 .rrow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}.rrow>span{font-weight:700;font-size:14px}
 .favg{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;text-align:center;margin:10px 0}.favg b{display:block;font:800 1.5rem var(--hz);color:var(--red)}.favg span{font-size:12px;color:var(--mut)}
-.fbi{padding:12px 0;border-bottom:1px solid var(--soft)}.fbi:last-child{border-bottom:0}.fbi .fh{display:flex;justify-content:space-between;gap:8px;font-weight:700}.fbi .fm{white-space:pre-wrap;margin:6px 0 0;overflow-wrap:anywhere}`;
+.fbi{padding:12px 0;border-bottom:1px solid var(--soft)}.fbi:last-child{border-bottom:0}.fbi .fh{display:flex;justify-content:space-between;gap:8px;font-weight:700}.fbi .fm{white-space:pre-wrap;margin:6px 0 0;overflow-wrap:anywhere}
+.fbi .fr{display:flex;align-items:center;gap:4px}.fbdel{background:transparent;color:var(--mut);border:0;box-shadow:none;min-height:0;padding:2px 8px;font-size:15px;line-height:1.2}.fbdel:hover{color:var(--bad)}`;
 document.head.append(st);
 
 const ok=()=>typeof user!="undefined"&&user&&SB;
@@ -154,7 +155,7 @@ function fbCard(){
   const avg=f=>{const v=fb.map(x=>x[f]).filter(Boolean);return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):"-"};
   return `<section class="card cls"><div class="clshead"><h2>${t("Feedback and suggestions")}</h2><span class="hint">${fb.length}</span></div>
   ${fb.length?`<div class="favg">${RATES.map(([k,f,l])=>`<div><b>${avg(f)}</b><span>${t(l)}</span></div>`).join("")}</div>
-  ${fb.map(x=>`<div class="fbi"><div class="fh"><span>${esc(x.student_name||t("Anonymous"))}</span><span class="hint">${ago(x.created_at)}</span></div>
+  ${fb.map(x=>`<div class="fbi"><div class="fh"><span>${esc(x.student_name||t("Anonymous"))}</span><span class="fr hint">${ago(x.created_at)}<button class="fbdel" data-fbd="${x.id}" aria-label="${t("Delete")}">✕</button></span></div>
   <div class="hint">${RATES.filter(r=>x[r[1]]).map(([k,f,l])=>`${t(l)}: ★${x[f]}`).join(" · ")}</div>
   ${x.message?`<p class="fm">${esc(x.message)}</p>`:""}</div>`).join("")}`:`<p class="hint">${t("No feedback yet.")}</p>`}</section>`;
 }
@@ -225,6 +226,13 @@ function bindClass(){
     if(error){alert(error.message);return}
     await load(true);TAB="learn";home()};
   $("#cre").onclick=()=>loadPanel();
+  app.querySelectorAll("[data-fbd]").forEach(b=>b.onclick=async()=>{
+    if(!confirm(t("Delete this feedback?")))return;
+    const fid=b.dataset.fbd;
+    const{data,error}=await SB.from("class_feedback").delete().eq("id",fid).select("id");
+    if(error||!data||!data.length){alert(error?error.message:t("Could not delete this feedback."));return}
+    if(CL.panel)CL.panel.fb=(CL.panel.fb||[]).filter(x=>x.id!==fid);
+    home()});
   if($("#als")){
     $("#alall").onclick=()=>app.querySelectorAll("[data-al]").forEach(c=>c.checked=true);
     $("#alno").onclick=()=>app.querySelectorAll("[data-al]").forEach(c=>c.checked=false);
