@@ -1,6 +1,8 @@
 (()=>{
 const CL={classes:[],owned:[],isT:false,decks:{},last:0,panel:null,uid:null};
 let busy=false,CID=null;
+const FB={r:{},msg:"",anon:false,ok:false};
+const RATES=[["teacher","r_teacher","Laoshi / teacher"],["material","r_material","Explanation of the material"],["method","r_method","Teaching method"],["course","r_course","The course"]];
 const st=document.createElement("style");
 st.textContent=`.cls .clshead{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.cls h2{margin:0}
 .role{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:2px 8px;margin-left:8px;background:var(--soft);color:var(--mut);vertical-align:middle}.role.t{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
@@ -11,7 +13,11 @@ st.textContent=`.cls .clshead{display:flex;gap:12px;align-items:center;justify-c
 .stu .ss{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--mut);margin:6px 0}.drw{margin:6px 0}.drw .dt{display:flex;justify-content:space-between;font-size:12.5px;gap:8px;margin-bottom:3px}
 .dsec{margin:10px 0 4px;padding:8px 10px;border:1px solid var(--soft);border-radius:12px}.dsec .mm{margin-top:6px}
 .mrow{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}
-@media(min-width:900px){.v-class{grid-template-columns:1fr 1fr;align-items:start}.v-class>.wide{grid-column:1/-1}}`;
+@media(min-width:900px){.v-class{grid-template-columns:1fr 1fr;align-items:start}.v-class>.wide{grid-column:1/-1}}
+.stars{display:flex;gap:2px}.stars button{background:transparent;border:0;box-shadow:none;color:var(--line);font-size:28px;line-height:1;padding:2px 4px;min-height:40px;min-width:36px}.stars button.on{color:var(--acc2)}
+.rrow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}.rrow>span{font-weight:700;font-size:14px}
+.favg{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;text-align:center;margin:10px 0}.favg b{display:block;font:800 1.5rem var(--hz);color:var(--red)}.favg span{font-size:12px;color:var(--mut)}
+.fbi{padding:12px 0;border-bottom:1px solid var(--soft)}.fbi:last-child{border-bottom:0}.fbi .fh{display:flex;justify-content:space-between;gap:8px;font-weight:700}.fbi .fm{white-space:pre-wrap;margin:6px 0 0;overflow-wrap:anywhere}`;
 document.head.append(st);
 
 const ok=()=>typeof user!="undefined"&&user&&SB;
@@ -86,16 +92,16 @@ async function createClass(){
   if(error){m.textContent=error.message;return}
   await load(true);home();
 }
-function openClass(id){CID=id;TAB="class";window.scrollTo(0,0);CL.panel=null;home();loadPanel()}
+function openClass(id){CID=id;TAB="class";FB.ok=false;window.scrollTo(0,0);CL.panel=null;home();loadPanel()}
 async function loadPanel(){
   if(!CID||!ok())return;
   await load(true);
   if(owns(CID)){
     try{
-      const[m,p]=await Promise.all([SB.from("class_members").select("student_id,joined_at").eq("class_id",CID),SB.from("class_progress").select("*").eq("class_id",CID)]);
+      const[m,p,f]=await Promise.all([SB.from("class_members").select("student_id,joined_at").eq("class_id",CID),SB.from("class_progress").select("*").eq("class_id",CID),SB.from("class_feedback").select("*").eq("class_id",String(CID)).order("created_at",{ascending:false}).limit(100)]);
       const ids=(m.data||[]).map(x=>x.student_id),prof={};
       if(ids.length){const{data}=await SB.from("profiles").select("user_id,name,avatar_v").in("user_id",ids);(data||[]).forEach(r=>{prof[r.user_id]=r})}
-      CL.panel={members:m.data||[],progress:p.data||[],prof};
+      CL.panel={members:m.data||[],progress:p.data||[],prof,fb:f.data||[]};
     }catch(x){console.warn("classroom:",x&&x.message||x)}
   }
   if(TAB=="class")home();
@@ -142,17 +148,56 @@ function alertCard(){
   <input id="alt" maxlength="80" placeholder="${t("Title (optional)")}" style="width:100%;margin-top:10px"><textarea id="alb" rows="3" maxlength="500" placeholder="${t("Message")}"></textarea>
   <div class="row"><button id="als">${t("Send")}</button></div><div id="alm" class="hint" role="status" style="min-height:1.2em"></div></section>`;
 }
+function fbCard(){
+  const P=CL.panel;if(!P)return "";
+  const fb=P.fb||[];
+  const avg=f=>{const v=fb.map(x=>x[f]).filter(Boolean);return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):"-"};
+  return `<section class="card cls"><div class="clshead"><h2>${t("Feedback and suggestions")}</h2><span class="hint">${fb.length}</span></div>
+  ${fb.length?`<div class="favg">${RATES.map(([k,f,l])=>`<div><b>${avg(f)}</b><span>${t(l)}</span></div>`).join("")}</div>
+  ${fb.map(x=>`<div class="fbi"><div class="fh"><span>${esc(x.student_name||t("Anonymous"))}</span><span class="hint">${ago(x.created_at)}</span></div>
+  <div class="hint">${RATES.filter(r=>x[r[1]]).map(([k,f,l])=>`${t(l)}: ★${x[f]}`).join(" · ")}</div>
+  ${x.message?`<p class="fm">${esc(x.message)}</p>`:""}</div>`).join("")}`:`<p class="hint">${t("No feedback yet.")}</p>`}</section>`;
+}
+function fbForm(){
+  return `<section class="card cls wide"><h2>${t("Feedback and suggestions")}</h2>
+  <p class="hint" style="margin:0 0 8px">${t("Share how the class is going. Only your laoshi can read this.")}</p>
+  ${RATES.map(([k,f,l])=>`<div class="rrow"><span>${t(l)}</span><div class="stars" role="group" aria-label="${t(l)}">${[1,2,3,4,5].map(v=>`<button type="button" class="${(FB.r[k]||0)>=v?"on":""}" data-rt="${k}" data-v="${v}" aria-label="${v}">★</button>`).join("")}</div></div>`).join("")}
+  <textarea id="fbm" rows="4" maxlength="1000" placeholder="${t("Write your feedback or suggestions (optional)")}">${esc(FB.msg)}</textarea>
+  <label class="ls"><input type="checkbox" id="fba" ${FB.anon?"checked":""}> ${t("Send anonymously")}</label>
+  <p class="hint" id="fbn" style="margin:2px 0 0">${t(FB.anon?"Anonymous: your laoshi will not see your name.":"Your laoshi will see your name with this message.")}</p>
+  <div class="row"><button id="fbs">${t("Send")}</button></div>
+  <div id="fbe" class="hint" role="status" style="min-height:1.2em">${FB.ok?esc(t("Thank you! Your feedback was sent.")):""}</div></section>`;
+}
+function bindFeedback(id){
+  const clr=()=>{FB.ok=false;const e=$("#fbe");if(e)e.textContent=""};
+  const paint=()=>app.querySelectorAll("[data-rt]").forEach(b=>b.classList.toggle("on",(FB.r[b.dataset.rt]||0)>=+b.dataset.v));
+  app.querySelectorAll("[data-rt]").forEach(b=>b.onclick=()=>{const k=b.dataset.rt,v=+b.dataset.v;if(FB.r[k]===v)delete FB.r[k];else FB.r[k]=v;clr();paint()});
+  const m=$("#fbm");if(m)m.oninput=()=>{FB.msg=m.value;clr()};
+  const a=$("#fba");if(a)a.onchange=()=>{FB.anon=a.checked;$("#fbn").textContent=t(FB.anon?"Anonymous: your laoshi will not see your name.":"Your laoshi will see your name with this message.")};
+  const s=$("#fbs");if(!s)return;
+  s.onclick=async()=>{
+    const e=$("#fbe"),msg=FB.msg.trim();
+    if(!msg&&!Object.keys(FB.r).length){e.textContent=t("Add a rating or a message.");return}
+    s.disabled=true;
+    const{error}=await SB.rpc("send_class_feedback",{p_class_id:String(id),p_teacher:FB.r.teacher||null,p_material:FB.r.material||null,p_method:FB.r.method||null,p_course:FB.r.course||null,p_message:msg,p_anon:FB.anon});
+    s.disabled=false;
+    if(error){e.textContent=/too soon/i.test(error.message)?t("You can send feedback once per hour. Please try again later."):error.message;return}
+    FB.r={};FB.msg="";FB.ok=true;home();
+  };
+}
 window.clsView=()=>{
   const id=CID,tc=owns(id),c=tc?CL.owned.find(x=>x.id===id):CL.classes.find(x=>x.class_id===id);
   const back=`<div class="wide"><button class="ghost sm" id="clb">${t("Back")}</button></div>`;
   if(!c)return `${back}<section class="card"><p class="hint">${t("Loading")}</p></section>`;
   if(!tc)return `${back}<section class="card cls wide"><div class="clshead"><div><h2 style="display:inline">${esc(c.name)}</h2>${badge(false)}<p class="hint" style="margin:6px 0 0;display:flex;align-items:center;gap:6px">${t("Teacher")}: ${avHTML(avUrl(c.teacher_id,c.teacher_av),c.teacher_name,"sm")}${esc(c.teacher_name)}</p></div><button class="ghost sm" id="clv">${t("Leave class")}</button></div></section>
-    <section class="card cls wide"><h2>${t("Class decks")}</h2>${deckRows(id,false)}</section>`;
+    <section class="card cls wide"><h2>${t("Class decks")}</h2>${deckRows(id,false)}</section>
+    ${fbForm()}`;
   return `${back}<section class="card cls"><div class="clshead"><div><h2 style="display:inline">${esc(c.name)}</h2>${badge(true)}</div><button class="ghost sm danger" id="cdl">${t("Delete class")}</button></div><h3>${t("Your class code")}</h3><div class="code2">${esc(c.code)}</div><p class="hint" style="margin:0">${t("Only you can see this code. Share it with your students.")}</p>
     <div class="row"><button class="ghost sm" id="ccp">${t("Copy")}</button><button class="ghost sm" id="cnw">${t("New code")}</button></div>
     <div class="row"><input id="cnm" value="${esc(c.name)}" maxlength="60" aria-label="${t("Class name")}" style="flex:1;min-width:160px"><button class="sm" id="csv">${t("Save")}</button></div></section>
     <section class="card cls"><div class="clshead"><h2>${t("Students")}</h2><button class="ghost sm" id="cre">${t("Refresh")}</button></div>${studentsHTML()}</section>
     ${alertCard()}
+    ${fbCard()}
     <section class="card cls"><h2>${t("Class decks")}</h2>${deckRows(id,true)}</section>
     <section class="card cls"><h2>${t("Choose decks")}</h2>${deckTools()}<div class="dlist">${deckList("all",new Set(),"data-cd")}</div><div class="row"><button id="cad">${t("Add selected decks")}</button></div><div id="cadm" class="hint" role="status"></div></section>`;
 };
@@ -166,6 +211,7 @@ function bindClass(){
       await SB.from("class_progress").delete().eq("class_id",id).eq("student_id",user.id);
       await SB.from("class_members").delete().eq("class_id",id).eq("student_id",user.id);
       await load(true);TAB="learn";home()};
+    bindFeedback(id);
     return;
   }
   if(!$("#ccp"))return;
